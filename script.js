@@ -19,6 +19,8 @@ console.clear();
 // BLE Codes for our service
 const kBLEDescCharNameUUID = 0x2901;
 const kBLEDescSFEPropTypeUUID = 0xA101;
+const kBLEDescSFEPropRangeMinUUID = 0xA110;
+const kBLEDescSFEPropRangeMaxUUID = 0xA111;
 
 // Property type codes - sent as a value of the char descriptor 
 const kSFEPropTypeBool      = 0x1;
@@ -70,41 +72,41 @@ class Property{
 
     generateElement(){} // stub
 }
-	// -------------------------------------------
-  	class boolProperty extends Property{
+// -------------------------------------------
+class boolProperty extends Property{
 
-   		generateElement(){
+   	generateElement(){
 
-   			let div = document.createElement("div");
+   	    let div = document.createElement("div");
 
-   			div.innerHTML = `
-	   			<div class="setting">
-					<input type="checkbox" id="`+ this.ID + `" />
-					<label for="` + this.ID + `">` + this.name + `</label>
-				</div>
-   			`;
+   		div.innerHTML = `
+	   		<div class="setting">
+				<input type="checkbox" id="`+ this.ID + `" />
+				<label for="` + this.ID + `">` + this.name + `</label>
+			</div>
+   		`;
 
-   			document.getElementById(targetID).appendChild(div);
-   			this.inputField = div.querySelector('input');
+   		document.getElementById(targetID).appendChild(div);
+   		this.inputField = div.querySelector('input');
 
-            // event handler wireup - on change event, save the new value to BLE device
-   			this.inputField.addEventListener("change", () => {
-   				this.saveValue();
-   			});
-   			this.updateValue();   			
-   		}
+        // event handler wireup - on change event, save the new value to BLE device
+   		this.inputField.addEventListener("change", () => {
+   			this.saveValue();
+   		});
+   		this.updateValue();   			
+   	}
 
-    	updateValue(){
-           // get the value from the BLE char and place it in the field
-           console.log("Update Value Bool");
-           this.inputField.checked= true;
-    	}
+    updateValue(){
+        // get the value from the BLE char and place it in the field
+        console.log("Update Value Bool");
+        this.inputField.checked= true;
+    }
 
-       	saveValue(){
-           // Get the value from the input field and save it to the characteristic
-           console.log("Save Value Bool: " + this.inputField.checked);
-      	}
-   }
+    saveValue(){
+        // Get the value from the input field and save it to the characteristic
+        console.log("Save Value Bool: " + this.inputField.checked);
+    }
+}
 
 	function addBoolProperty(){
 
@@ -116,69 +118,77 @@ class Property{
    		newProperty.generateElement(); // generate the HTML
    }
 
-   //-------------------------------------------------------------
-	const range_fill = "#0B1EDF";
-	const range_background = "rgba(255, 255, 255, 0.214)";   
+//-------------------------------------------------------------
+const range_fill = "#0B1EDF";
+const range_background = "rgba(255, 255, 255, 0.214)";   
 
-  	class rangeProperty extends Property{
+class rangeProperty extends Property{
 
-        int(){
-            // Get Min and Max of Range
-            //TODO
+    int(){
+        // Get Min and Max of Range
+        // Get the type descriptor
+        this.characteristic.getDescriptor(kBLEDescSFEPropRangeMinUUID).then(desc =>{
+            desc.readValue().then(value =>{
+                this.min = value.getInt16(0,0);
 
-            this.min = 0;
-            this.max = 200;
+                this.characteristic.getDescriptor(kBLEDescSFEPropRangeMaxUUID).then(desc =>{
+                    desc.readValue().then(value =>{
+                        this.max = value.getInt16(0,0);
 
-            // call super to finish setup
-            super.init();            
-        }
-        //------------------------
-   		generateElement(){
+                        super.init();
+                    });
+                });
+            });
+        });
 
-   			let div = document.createElement("div");
-   			div.innerHTML = `
-   				<div class="length range__slider" data-min="`+ this.min +`" data-max="` + this.max +`">
-					<div class="length__title field-title" data-length='0'>`+ this.name +`:</div>
-					<input id="slider" type="range" min="`+ this.min +`" max="`+ this.max +`" value="16" />
-				</div>
-   			`;
-			this.input = div.querySelector('input');
-			this.txtValue = div.querySelector('.length__title');
+    }
+    
+    //------------------------
+   	generateElement(){
 
-   			document.getElementById(targetID).appendChild(div);
+   		let div = document.createElement("div");
+   		div.innerHTML = `
+   			<div class="length range__slider" data-min="`+ this.min +`" data-max="` + this.max +`">
+				<div class="length__title field-title" data-length='0'>`+ this.name +`:</div>
+				<input id="slider" type="range" min="`+ this.min +`" max="`+ this.max +`" value="16" />
+			</div>
+   		`;
+		this.input = div.querySelector('input');
+		this.txtValue = div.querySelector('.length__title');
+
+   		document.getElementById(targetID).appendChild(div);
    			
-   			// Update slider values - event handler
-   			this.input.addEventListener("input", event => {
-   				//set text
-				this.txtValue.setAttribute("data-length", ' '+event.target.value);
-				// set gutter color - 
-				const percentage = (100 * (this.input.value - this.input.min)) / (this.input.max - this.input.min);
-				const bg = `linear-gradient(90deg, ${range_fill} ${percentage}%, ${range_background} ${percentage + 0.1}%)`;
-				this.input.style.background = bg;
-			});
+   		// Update slider values - event handler
+   		this.input.addEventListener("input", event => {
+   			//set text
+			this.txtValue.setAttribute("data-length", ' '+event.target.value);
+			// set gutter color - 
+			const percentage = (100 * (this.input.value - this.input.min)) / (this.input.max - this.input.min);
+			const bg = `linear-gradient(90deg, ${range_fill} ${percentage}%, ${range_background} ${percentage + 0.1}%)`;
+			this.input.style.background = bg;
+		});
 
-   			// On change, set the underlying value
-   			this.input.addEventListener("change", () => {
-   				this.saveValue();
-   			});
-   			// and now update to the current value
-   			this.updateValue();   			
-   		}
-   		
+   		// On change, set the underlying value
+   		this.input.addEventListener("change", () => {
+   			this.saveValue();
+   		});
+   		// and now update to the current value
+   		this.updateValue();   			
+   	}
 
-    	updateValue(){
-           // get the value from the BLE char and place it in the field
-           console.log("Update Value Range");
-           this.input.value=10;  // TODO
-           // send an event to the thing to trigger ui update
-           this.input.dispatchEvent(new Event('input'));
-    	}
+   	updateValue(){
+       // get the value from the BLE char and place it in the field
+       console.log("Update Value Range");
+       this.input.value=10;  // TODO
+       // send an event to the thing to trigger ui update
+       this.input.dispatchEvent(new Event('input'));
+    }
 
-       	saveValue(){
-           // Get the value from the input field and save it to the characteristic
-           console.log("Save Value Range: " + this.input.value);
-      	}
-   }
+    saveValue(){
+        // Get the value from the input field and save it to the characteristic
+        console.log("Save Value Range: " + this.input.value);
+      }
+}
 
 	function addRangeProperty(){
   
@@ -188,38 +198,39 @@ class Property{
    		properties.push(newProperty);
    		newProperty.generateElement(); // generate the HTML
    }
+//-------------------------------------------------------------
+// textProperty Object
+class textProperty extends Property{
 
-	class textProperty extends Property{
+   	generateElement(){
 
-   		generateElement(){
+   		let div = document.createElement("div");
+   		div.innerHTML = `
+	   		<div class="text-prop">
+				<input type="text" id="`+ this.ID + `" />
+				<label for="` + this.ID + `">` + this.name + `</label>
+			</div>
+   		`;
+   		document.getElementById(targetID).appendChild(div);
 
-   			let div = document.createElement("div");
-   			div.innerHTML = `
-	   			<div class="text-prop">
-					<input type="text" id="`+ this.ID + `" />
-					<label for="` + this.ID + `">` + this.name + `</label>
-				</div>
-   			`;
-   			document.getElementById(targetID).appendChild(div);
+   		this.inputField = div.querySelector('input');
+   		this.inputField.addEventListener("change", () => {
+   			this.saveValue();
+   		});
+   		this.updateValue();   			
+   	}
 
-   			this.inputField = div.querySelector('input');
-   			this.inputField.addEventListener("change", () => {
-   				this.saveValue();
-   			});
-   			this.updateValue();   			
-   		}
+	updateValue(){
+        // get the value from the BLE char and place it in the field
+        console.log("Update Value Text");
+        this.inputField.value="Some Text";
+    }
 
-    	updateValue(){
-           // get the value from the BLE char and place it in the field
-           console.log("Update Value Text");
-           this.inputField.value="Some Text";
-    	}
-
-       	saveValue(){
-           // Get the value from the input field and save it to the characteristic
-           console.log("Save Value Text: " + this.inputField.value);
-      	}
-   }
+    saveValue(){
+        // Get the value from the input field and save it to the characteristic
+        console.log("Save Value Text: " + this.inputField.value);
+    }
+}
 
 	function addTextProperty(){
 
@@ -230,44 +241,56 @@ class Property{
    		properties.push(newProperty);
    		newProperty.generateElement(); // generate the HTML
    }
+//-------------------------------------------------------------
+// intProperty Object
 
-   function isNumberKey(evt){
-    var charCode = (evt.which) ? evt.which : evt.keyCode
+// Function to limit text entry to numbers
+   
+function isNumberKey(evt){
+    let charCode = (evt.which) ? evt.which : evt.keyCode
     if (charCode > 31 && (charCode < 48 || charCode > 57))
         return false;
     return true;
 }
-	class intProperty extends Property{
+	
+class intProperty extends Property{
 
-   		generateElement(){
+   	generateElement(){
 
-   			let div = document.createElement("div");
-   			div.innerHTML = `
-	   			<div class="text-prop">
-					<input type="text" id="`+ this.ID + `" onkeypress="return isNumberKey(event)"/>
-					<label for="` + this.ID + `">` + this.name + `</label>
-				</div>
-   			`;
-   			document.getElementById(targetID).appendChild(div);
+   		let div = document.createElement("div");
+   		div.innerHTML = `
+	   		<div class="text-prop">
+				<input type="text" id="`+ this.ID + `" onkeypress="return isNumberKey(event)"/>
+				<label for="` + this.ID + `">` + this.name + `</label>
+			</div>
+   		`;
+   		document.getElementById(targetID).appendChild(div);
 
-   			this.inputField = div.querySelector('input');
-   			this.inputField.addEventListener("change", () => {
-   				this.saveValue();
-   			});
-   			this.updateValue();   			
-   		}
+   		this.inputField = div.querySelector('input');
+   		this.inputField.addEventListener("change", () => {
+   			this.saveValue();
+   		});
+   		this.updateValue();   			
+   	}
 
-    	updateValue(){
-           // get the value from the BLE char and place it in the field
-           console.log("Update Value Number");
-           this.inputField.value=134;
-    	}
+    updateValue(){
+        // get the value from the BLE char and place it in the field
+        this.characteristic.readValue().then( value =>{
+            console.log(`The BuadRate is: ${value.getUint32(0, true)}`);
+            this.inputField.value = value.getUint32(0, true);
+        });
+    }
 
-       	saveValue(){
-           // Get the value from the input field and save it to the characteristic
-           console.log("Save Value Number: " + this.inputField.value);
-      	}
-   }
+    saveValue(){
+        // Get the value from the input field and save it to the characteristic
+        console.log("Save Value Number: " + this.inputField.value);
+        let buff = new ArrayBuffer(4);
+        let newValue = new Uint32Array(buff);
+        console.log(newValue);
+        newValue[0] = this.inputField.value;
+        this.characteristic.writeValue(buff);
+    }
+}
 
 	function addIntProperty(){
 
@@ -279,12 +302,15 @@ class Property{
    		newProperty.generateElement(); // generate the HTML
    }
 
-// Our property object defs = KEY: The order is same as type code index above. 
-const propFactory = [boolProperty, intProperty, rangeProperty, textProperty];
+
 
 //--------------------------------------------------------------------------------------
 // Add a property to the system based on a BLE Characteristic
 //
+// Our property object defs = KEY: The order is same as type code index above. 
+const propFactory = [boolProperty, intProperty, rangeProperty, textProperty];
+
+
 function addPropertyToSystem(bleCharacteristic){
 
     // Get the type descriptor
@@ -307,6 +333,9 @@ function addPropertyToSystem(bleCharacteristic){
             property.init();
 
         });
+    }).catch(error => {
+        console.log("getDescriptor - property type failed");
+        console.log(error);
     });
 }
 //--------------------------------------------------------------------------------------

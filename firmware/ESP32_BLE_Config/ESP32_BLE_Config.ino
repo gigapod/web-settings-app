@@ -22,13 +22,32 @@
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
 
+#define kTargetServiceUUID  "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define kTargetServiceName  "OpenLog"
+//--------------------------------------------------------------------------------------
 
-#define BLE_BROADCAST_NAME "OpenLog"
+//--------------------------------------------------------------------------------------
+// Property Creation and Management
+//
+// Dynamically create and manage properties
+//--------------------------------------------------------------------------------------
 
-#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+// BLE Codes for our service
+#define kBLEDescCharNameUUID            0x2901
+#define kBLEDescSFEPropTypeUUID         0xA101
+#define kBLEDescSFEPropRangeMinUUID     0xA110
+#define kBLEDescSFEPropRangeMaxUUID     0xA111
 
-#define CHARACTERISTIC_UUID_BAUD "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-BLECharacteristic *baudCharacteristic;
+// Property type codes - sent as a value of the char descriptor 
+#define kSFEPropTypeBool       0x1
+#define kSFEPropTypeInt        0x2
+#define kSFEPropTypeRange      0x3
+#define kSFEPropTypeText       0x4
+
+
+#define kCharacteristicBaudUUID  "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+
+
 uint32_t baudRate = 115200;
 
 bool deviceConnected = false;
@@ -83,55 +102,113 @@ class cbSetBaud: public BLECharacteristicCallbacks {
     }
 };
 
+class intProperty: public BLECharacteristicCallbacks {
+
+public:
+    intProperty( uint32_t *value, void (*updateCB)(uint32_t)) {
+
+        _onSetCB = updateCB;
+        pValue = value;
+    }
+
+    void onWrite(BLECharacteristic *baudCharacteristic)
+    {
+     
+        uint32_t newValue = stringToValue(baudCharacteristic->getValue());
+        Serial.print("OnWriteCallback value: ");
+        Serial.println(newValue);
+        if(pValue)
+            *pValue = newValue;
+        _onSetCB(newValue);
+
+    }
+    // I don't think this is needed
+    void onRead(BLECharacteristic *baudCharacteristic){
+
+      // for debugging
+      Serial.print("Integer Property Requested: "); 
+      Serial.println(*pValue);
+
+      // moving bytes to network endianess ....   
+      //      uint32_t buffer = htonl(value);      
+      baudCharacteristic->setValue(*pValue);      
+
+    }
+
+
+
+private:
+    void (*_onSetCB)(uint32_t);
+    uint32_t *pValue;
+};
+
+//---------------------------------------------------------------------------------
+// Baud Rate Characterisitic 
+//
+// A Integer Characterisitic (property) example
+
+void onBaudUpdate(uint32_t newValue){
+
+    Serial.print("Update Baud Value: "); 
+    Serial.println(baudRate);
+}
+void setupBaudCharacteristic(BLEService *pService){
+
+    BLECharacteristic *pCharBaud;
+
+    pCharBaud = pService->createCharacteristic(
+                            kCharacteristicBaudUUID,
+                            BLECharacteristic::PROPERTY_READ  |
+                            BLECharacteristic::PROPERTY_WRITE |
+                            BLECharacteristic::PROPERTY_NOTIFY );
+
+    // Set our value 
+    pCharBaud->setValue(baudRate);  //TODO -- IS THIS NEEDED???
+
+    // Set the value in the callbacks 
+    pCharBaud->setCallbacks(new intProperty(&baudRate, onBaudUpdate));
+
+    // Add descriptor to that service (char user description)
+    BLEDescriptor * pDesc = new BLEDescriptor((uint16_t)kBLEDescCharNameUUID);
+    std::string descStr = "Output Baud Value";
+    pDesc->setValue(descStr);
+    pCharBaud->addDescriptor(pDesc);
+
+    pDesc = new BLEDescriptor((uint16_t)kBLEDescSFEPropTypeUUID);  // Property type
+    uint8_t data=kSFEPropTypeInt;
+    pDesc->setValue(&data,1);
+    pCharBaud->addDescriptor(pDesc);
+
+}
+
 void setup() {
-  Serial.begin(115200);
-  Serial.println("Starting BLE work!");
+    Serial.begin(115200);
+    Serial.println("Starting BLE work!");
 
-  BLEDevice::init(BLE_BROADCAST_NAME);
+    BLEDevice::init(kTargetServiceName);
 
-  BLEServer *pServer = BLEDevice::createServer();
-  pServer->setCallbacks(new MyServerCallbacks());
-  BLEService *pService = pServer->createService(SERVICE_UUID);
+    BLEServer *pServer = BLEDevice::createServer();
+    pServer->setCallbacks(new MyServerCallbacks());
+    BLEService *pService = pServer->createService(kTargetServiceUUID);
 
-  //Setup characterstics
+    //Setup characterstics
+    setupBaudCharacteristic(pService);
 
-  baudCharacteristic = pService->createCharacteristic(
-                         CHARACTERISTIC_UUID_BAUD,
-                         BLECharacteristic::PROPERTY_READ 
-                         | BLECharacteristic::PROPERTY_WRITE
-                         | BLECharacteristic::PROPERTY_NOTIFY
-                       );
-  //baudCharacteristic->setValue((uint8_t*)&baudRate, 4);
-  baudCharacteristic->setValue(baudRate);
-  baudCharacteristic->setCallbacks(new cbSetBaud());
-
-  // Add descriptor to that service (char user description)
-  BLEDescriptor * pDesc = new BLEDescriptor((uint16_t)0x2901);
-  std::string descStr = "Output Baud Value";
-  pDesc->setValue(descStr);
-  baudCharacteristic->addDescriptor(pDesc);
-
-  pDesc = new BLEDescriptor((uint16_t)0xA101);  // SFE TYPE? hack
-  uint8_t data=1;
-  pDesc->setValue(&data,1);
-  baudCharacteristic->addDescriptor(pDesc);
+    //Begin broadcasting
+    pService->start();
+    BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+    // NOTE: this will broadcast service so it's discoverable before 
+    //       device connection. Helps when using BLE scanner
+    pAdvertising->addServiceUUID(kTargetServiceUUID);
+    pAdvertising->setScanResponse(false);
+    pAdvertising->setMinPreferred(0x00);
+    pAdvertising->setScanResponse(true);
+    pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
+    pAdvertising->setMinPreferred(0x12);
+    BLEDevice::startAdvertising();
 
 
-  //Begin broadcasting
-  pService->start();
-  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
-  // NOTE: this will broadcast service so it's discoverable before 
-  //       device connection. Helps when using BLE scanner
-  pAdvertising->addServiceUUID(SERVICE_UUID);
-  pAdvertising->setScanResponse(false);
-  pAdvertising->setMinPreferred(0x00);
-  pAdvertising->setScanResponse(true);
-  pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
-  pAdvertising->setMinPreferred(0x12);
-  BLEDevice::startAdvertising();
-  //pServer->getAdvertising()->start();
-
-  Serial.println("BLE Started");
+    Serial.println("BLE Started");
 }
 
 void loop() {
