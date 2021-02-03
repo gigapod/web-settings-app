@@ -312,8 +312,36 @@ function connectToBLEService() {
                 // Now get all the characteristics for this service
                 primaryService.getCharacteristics().then(theCharacteristics => {                
 
-                  console.log("Service Characteristics");
-                  console.log(theCharacteristics.map(c => c.uuid).join('\n' + ' '.repeat(10)));
+                    console.log("Service Characteristics");
+                    for(const aChar of theCharacteristics){
+                        console.log(aChar);
+                        aChar.getDescriptor(0x2901).then(desc =>{
+                            console.log("Retrieved Descriptor");
+                            desc.readValue().then(value =>{
+                                console.log(value);
+                                let enc = new TextDecoder();
+                                let name = enc.decode(value);
+
+                                console.log(name);
+
+                                // Lets get the type of this thing
+                                aChar.getDescriptor(0xA101).then(desc => {
+                                    desc.readValue().then(value =>{
+                                        console.log(value);
+                                        let type = value.getUint8(0,0);
+
+                                        console.log("Char " + name + ", Type: " + type);
+
+                                        if(type == 1){
+                                            addBoolProperty();
+                                        }
+                                    });
+                                });
+                            })
+
+                        });
+                    }
+                    console.log(theCharacteristics.map(c => c.uuid).join('\n' + ' '.repeat(10)));
 
                 }).catch(error => {
                     console.log("getCharacteristics error");
