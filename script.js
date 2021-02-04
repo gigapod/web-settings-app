@@ -37,7 +37,7 @@ function dataToText(data){ return textDecoder.decode(data);}
 
 const textEncoder = new TextEncoder();
 function textToData(text){ return textEncoder.encode(text);}
-// KDB HACKS
+
 	
 const targetID = 'settings-container';
 const properties=[];
@@ -141,15 +141,15 @@ class rangeProperty extends Property{
 
     init(){
         // Get Min and Max of Range
-        // Get the type descriptor
-
         this.characteristic.getDescriptor(kBLEDescSFEPropRangeMinUUID).then(desc =>{
             desc.readValue().then(value =>{
-
                 this.min = value.getInt32(0,true);
+
                 this.characteristic.getDescriptor(kBLEDescSFEPropRangeMaxUUID).then(desc =>{
                     desc.readValue().then(value =>{
                         this.max = value.getInt32(0, true);
+
+                        // Call super - finish setup
                         super.init();
                     });
                 });
