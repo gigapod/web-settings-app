@@ -273,7 +273,8 @@ button {
   background: #a0a0a0;
   font-weight: bold;
   font-size: 1.1rem;
-  width:50%;
+  width:40%;
+  text-align: left;
 }
 
 .settings .text-prop input + label {
@@ -281,6 +282,32 @@ button {
 }
 
 
+.settings .number-prop {
+  position: relative;
+  width: 100%;
+  height: calc(65px - 10px);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  padding: 10px 25px;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.settings .number-prop input {
+  position: absolute;
+  right: 12px;
+  background: #a0a0a0;
+  font-weight: bold;
+  font-size: 1.1rem;
+  width:40%;
+  text-align: right;
+}
+
+.settings .number-prop input + label {
+  user-select: none;
+}
 .btn.generate {
   user-select: none;
   position: relative;

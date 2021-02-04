@@ -34,6 +34,8 @@ const kSFEPropTypeText      = 0x4;
 const textDecoder = new TextDecoder();
 function dataToText(data){ return textDecoder.decode(data);}
 
+const textEncoder = new TextEncoder();
+function textToData(text){ return textEncoder.encode(text);}
 // KDB HACKS
 	
 const targetID = 'settings-container';
@@ -97,26 +99,24 @@ class boolProperty extends Property{
    	}
 
     updateValue(){
+
         // get the value from the BLE char and place it in the field
-        console.log("Update Value Bool");
-        this.inputField.checked= true;
+        this.characteristic.readValue().then( value =>{
+            //console.log(`The  ${this.name} is: ${value.getUint8(0, true)}`);
+            this.inputField.checked = value.getUint8(0, true);
+        });
     }
 
     saveValue(){
+
         // Get the value from the input field and save it to the characteristic
-        console.log("Save Value Bool: " + this.inputField.checked);
+
+        let buff = new ArrayBuffer(1);
+        let newValue = new Uint8Array(buff);
+        newValue[0] = this.inputField.checked;
+        this.characteristic.writeValue(buff);
     }
 }
-
-	function addBoolProperty(){
-
-  
-   		let char = "dummy"; // image this being a ble characteristic
-   		
-		let newProperty = new boolProperty(char);
-   		properties.push(newProperty);
-   		newProperty.generateElement(); // generate the HTML
-   }
 
 //-------------------------------------------------------------
 const range_fill = "#0B1EDF";
@@ -124,17 +124,17 @@ const range_background = "rgba(255, 255, 255, 0.214)";
 
 class rangeProperty extends Property{
 
-    int(){
+    init(){
         // Get Min and Max of Range
         // Get the type descriptor
+
         this.characteristic.getDescriptor(kBLEDescSFEPropRangeMinUUID).then(desc =>{
             desc.readValue().then(value =>{
-                this.min = value.getInt16(0,0);
 
+                this.min = value.getInt32(0,true);
                 this.characteristic.getDescriptor(kBLEDescSFEPropRangeMaxUUID).then(desc =>{
                     desc.readValue().then(value =>{
-                        this.max = value.getInt16(0,0);
-
+                        this.max = value.getInt32(0, true);
                         super.init();
                     });
                 });
@@ -177,27 +177,26 @@ class rangeProperty extends Property{
    	}
 
    	updateValue(){
-       // get the value from the BLE char and place it in the field
-       console.log("Update Value Range");
-       this.input.value=10;  // TODO
-       // send an event to the thing to trigger ui update
-       this.input.dispatchEvent(new Event('input'));
+        // get the value from the BLE char and place it in the field
+        this.characteristic.readValue().then( value =>{
+            console.log(`The  ${this.name} is: ${value.getInt32(0, true)}`);
+            this.input.value = value.getInt32(0, true);
+           // send an event to the thing to trigger ui update
+           this.input.dispatchEvent(new Event('input'));
+        });
+
+
     }
 
     saveValue(){
         // Get the value from the input field and save it to the characteristic
-        console.log("Save Value Range: " + this.input.value);
+        let buff = new ArrayBuffer(4);
+        let newValue = new Int32Array(buff);
+        newValue[0] = this.input.value;
+        this.characteristic.writeValue(buff);
       }
 }
 
-	function addRangeProperty(){
-  
-   		let char = "dummy"; // image this being a ble characteristic
-   		
-		let newProperty = new rangeProperty(char);
-   		properties.push(newProperty);
-   		newProperty.generateElement(); // generate the HTML
-   }
 //-------------------------------------------------------------
 // textProperty Object
 class textProperty extends Property{
@@ -222,25 +221,23 @@ class textProperty extends Property{
 
 	updateValue(){
         // get the value from the BLE char and place it in the field
-        console.log("Update Value Text");
-        this.inputField.value="Some Text";
+        //console.log("Update Value Text");
+
+        // get the value from the BLE char and place it in the field
+        this.characteristic.readValue().then( value =>{
+           /// console.log(`The  ${this.name} is: ${value.getUint32(0, true)}`);
+            this.inputField.value = dataToText(value);
+
+        });
     }
 
     saveValue(){
         // Get the value from the input field and save it to the characteristic
-        console.log("Save Value Text: " + this.inputField.value);
+        //console.log("Save Value Text: " + this.inputField.value);
+        this.characteristic.writeValue(textToData(this.inputField.value));
     }
 }
 
-	function addTextProperty(){
-
-  
-   		let char = "dummy"; // image this being a ble characteristic
-   		
-		let newProperty = new textProperty(char);
-   		properties.push(newProperty);
-   		newProperty.generateElement(); // generate the HTML
-   }
 //-------------------------------------------------------------
 // intProperty Object
 
@@ -259,7 +256,7 @@ class intProperty extends Property{
 
    		let div = document.createElement("div");
    		div.innerHTML = `
-	   		<div class="text-prop">
+	   		<div class="number-prop">
 				<input type="text" id="`+ this.ID + `" onkeypress="return isNumberKey(event)"/>
 				<label for="` + this.ID + `">` + this.name + `</label>
 			</div>
@@ -276,33 +273,19 @@ class intProperty extends Property{
     updateValue(){
         // get the value from the BLE char and place it in the field
         this.characteristic.readValue().then( value =>{
-            console.log(`The BuadRate is: ${value.getUint32(0, true)}`);
-            this.inputField.value = value.getUint32(0, true);
+            console.log(`The  ${this.name} is: ${value.getInt32(0, true)}`);
+            this.inputField.value = value.getInt32(0, true);
         });
     }
 
     saveValue(){
         // Get the value from the input field and save it to the characteristic
-        console.log("Save Value Number: " + this.inputField.value);
         let buff = new ArrayBuffer(4);
-        let newValue = new Uint32Array(buff);
-        console.log(newValue);
+        let newValue = new Int32Array(buff);
         newValue[0] = this.inputField.value;
         this.characteristic.writeValue(buff);
     }
 }
-
-	function addIntProperty(){
-
-  
-   		let char = "dummy"; // image this being a ble characteristic
-   		
-		let newProperty = new intProperty(char);
-   		properties.push(newProperty);
-   		newProperty.generateElement(); // generate the HTML
-   }
-
-
 
 //--------------------------------------------------------------------------------------
 // Add a property to the system based on a BLE Characteristic
@@ -359,18 +342,12 @@ function connectToBLEService() {
             setDeviceName(device.name);
 
         return device.gatt.connect().then(gattServer => {
-            console.log("Connected to gattServer");
-            console.log(gattServer);
             
             // Connect to our target Service 
             gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
-                console.log("Connected-> Primary Service");
-                console.log(primaryService);
 
                 // Now get all the characteristics for this service
                 primaryService.getCharacteristics().then(theCharacteristics => {                
-
-                    console.log("Service Characteristics");
 
                     // Add the characteristics to the property sheet
                     for(const aChar of theCharacteristics){
@@ -403,21 +380,3 @@ let connectBtn = document.getElementById("connect")
 connectBtn.addEventListener("click", () => {
     connectToBLEService();
 });  
-
-  const toggleBtn = document.getElementById("add-toggle")
- toggleBtn.addEventListener("click", () => {
-   addBoolProperty();
- });
-// When Generate is clicked Password id generated.
-  const rangeBtn = document.getElementById("add-range")
-rangeBtn.addEventListener("click", () => {
-	addRangeProperty();
-});
-const textBtn = document.getElementById("add-text")
-textBtn.addEventListener("click", () => {
-	addTextProperty();
-});
-const numBtn = document.getElementById("add-number")
-numBtn.addEventListener("click", () => {
-	addIntProperty();
-});

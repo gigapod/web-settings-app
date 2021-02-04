@@ -18,6 +18,7 @@
 #include <BLEUtils.h>
 #include <BLEServer.h>
 
+#include "ESP32_BLE_Config.h"
 
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
@@ -45,10 +46,24 @@
 #define kSFEPropTypeText       0x4
 
 
-#define kCharacteristicBaudUUID  "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+// Our Characteristic UUIDs - and yes, just made these up
+#define kCharacteristicBaudUUID     "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+#define kCharacteristicEnabledUUID  "beb5483e-36e1-4688-b7f5-ea07361b26a9"
+#define kCharacteristicMessageUUID  "beb5483e-36e1-4688-b7f5-ea07361b26aa"
+#define kCharacteristicSampleUUID   "beb5483e-36e1-4688-b7f5-ea07311b260b"
 
 
+// PROPERTY Data/Local Variables
 uint32_t baudRate = 115200;
+
+bool deviceEnabled = true;
+
+std::string strMessage("Welcome");
+
+uint32_t sampleRate = 123;
+
+const uint32_t sampleRateMin = 10;
+const uint32_t sampleRateMax = 240;
 
 bool deviceConnected = false;
 bool newConfig = true;
@@ -79,75 +94,49 @@ int32_t stringToValue(std::string myString)
   return (newValue);
 }
 
-class cbSetBaud: public BLECharacteristicCallbacks {
-    void onWrite(BLECharacteristic *baudCharacteristic)
-    {
-     
-      baudRate = stringToValue(baudCharacteristic->getValue());
-      newConfig = true;
-      Serial.print("cbSetBaud: onWrite: New Value:");
-      Serial.println(baudRate);
-    }
-    // I don't think this is needed
-    void onRead(BLECharacteristic *baudCharacteristic){
+//---------------------------------------------------------------------------------
+// Enabled Characterisitic 
+//
+// A Bool Characterisitic (property) example
 
-      // for debugging
-      Serial.print("Baud Rate Requested: "); 
-      Serial.println(baudRate);
-      // Not sure if this is needed in BLE land, but 
-      // moving bytes to network endianess ....   
-      uint32_t buffer = htonl(baudRate);      
-      baudCharacteristic->setValue(baudRate);      
+void onEnabledUpdate(bool newValue){
 
-    }
-};
+    Serial.print("Update Enabled Value: "); 
+    Serial.println(deviceEnabled);
+}
+void setupEnabledCharacteristic(BLEService *pService){
 
-class intProperty: public BLECharacteristicCallbacks {
+    BLECharacteristic *pCharBaud;
 
-public:
-    intProperty( uint32_t *value, void (*updateCB)(uint32_t)) {
+    pCharBaud = pService->createCharacteristic(
+                            kCharacteristicEnabledUUID,
+                            BLECharacteristic::PROPERTY_READ  |
+                            BLECharacteristic::PROPERTY_WRITE |
+                            BLECharacteristic::PROPERTY_NOTIFY );
 
-        _onSetCB = updateCB;
-        pValue = value;
-    }
+    // Set the value in the callbacks 
+    pCharBaud->setCallbacks(new BoolPropertyValueCB(&deviceEnabled, onEnabledUpdate));
 
-    void onWrite(BLECharacteristic *baudCharacteristic)
-    {
-     
-        uint32_t newValue = stringToValue(baudCharacteristic->getValue());
-        Serial.print("OnWriteCallback value: ");
-        Serial.println(newValue);
-        if(pValue)
-            *pValue = newValue;
-        _onSetCB(newValue);
+    // Add descriptor to that service (char user description)
+    BLEDescriptor * pDesc = new BLEDescriptor((uint16_t)kBLEDescCharNameUUID);
+    std::string descStr = "Device Enabled";
+    pDesc->setValue(descStr);
+    pCharBaud->addDescriptor(pDesc);
 
-    }
-    // I don't think this is needed
-    void onRead(BLECharacteristic *baudCharacteristic){
+    pDesc = new BLEDescriptor((uint16_t)kBLEDescSFEPropTypeUUID);  // Property type
+    uint8_t data=kSFEPropTypeBool;
+    pDesc->setValue(&data,1);
+    pCharBaud->addDescriptor(pDesc);
 
-      // for debugging
-      Serial.print("Integer Property Requested: "); 
-      Serial.println(*pValue);
+}
 
-      // moving bytes to network endianess ....   
-      //      uint32_t buffer = htonl(value);      
-      baudCharacteristic->setValue(*pValue);      
-
-    }
-
-
-
-private:
-    void (*_onSetCB)(uint32_t);
-    uint32_t *pValue;
-};
 
 //---------------------------------------------------------------------------------
 // Baud Rate Characterisitic 
 //
 // A Integer Characterisitic (property) example
 
-void onBaudUpdate(uint32_t newValue){
+void onBaudUpdate(int32_t newValue){
 
     Serial.print("Update Baud Value: "); 
     Serial.println(baudRate);
@@ -162,11 +151,8 @@ void setupBaudCharacteristic(BLEService *pService){
                             BLECharacteristic::PROPERTY_WRITE |
                             BLECharacteristic::PROPERTY_NOTIFY );
 
-    // Set our value 
-    pCharBaud->setValue(baudRate);  //TODO -- IS THIS NEEDED???
-
     // Set the value in the callbacks 
-    pCharBaud->setCallbacks(new intProperty(&baudRate, onBaudUpdate));
+    pCharBaud->setCallbacks(new IntPropertyValueCB((int32_t*)&baudRate, onBaudUpdate));
 
     // Add descriptor to that service (char user description)
     BLEDescriptor * pDesc = new BLEDescriptor((uint16_t)kBLEDescCharNameUUID);
@@ -180,6 +166,91 @@ void setupBaudCharacteristic(BLEService *pService){
     pCharBaud->addDescriptor(pDesc);
 
 }
+//---------------------------------------------------------------------------------
+// Message Characterisitic 
+//
+// A String Characterisitic (property) example
+
+void onMessageUpdate(std::string &  newValue){
+
+    Serial.print("Update Message Value: "); 
+    Serial.println(newValue.c_str());
+}
+void setupMessageCharacteristic(BLEService *pService){
+
+    BLECharacteristic *pCharBaud;
+
+    pCharBaud = pService->createCharacteristic(
+                            kCharacteristicMessageUUID,
+                            BLECharacteristic::PROPERTY_READ  |
+                            BLECharacteristic::PROPERTY_WRITE |
+                            BLECharacteristic::PROPERTY_NOTIFY );
+
+    // Set the value in the callbacks 
+    pCharBaud->setCallbacks(new TextPropertyValueCB(strMessage, onMessageUpdate));
+
+    // Add descriptor to that service (char user description)
+    BLEDescriptor * pDesc = new BLEDescriptor((uint16_t)kBLEDescCharNameUUID);
+    std::string descStr = "Device Message";
+    pDesc->setValue(descStr);
+    pCharBaud->addDescriptor(pDesc);
+
+    pDesc = new BLEDescriptor((uint16_t)kBLEDescSFEPropTypeUUID);  // Property type
+    uint8_t data=kSFEPropTypeText;
+    pDesc->setValue(&data,1);
+    pCharBaud->addDescriptor(pDesc);
+
+}
+
+
+//---------------------------------------------------------------------------------
+// Sample Rate Characterisitic 
+//
+// A Integer Range Characterisitic (property) example
+
+void onSampleRateUpdate(int32_t newValue){
+
+    Serial.print("Update Sample Value: "); 
+    Serial.println(sampleRate);
+}
+void setupSampleRateCharacteristic(BLEService *pService){
+
+
+    BLECharacteristic *pCharBaud;
+
+    pCharBaud = pService->createCharacteristic(
+                            kCharacteristicSampleUUID,
+                            BLECharacteristic::PROPERTY_READ  |
+                            BLECharacteristic::PROPERTY_WRITE |
+                            BLECharacteristic::PROPERTY_NOTIFY );
+
+    // Set the value in the callbacks - can just use the int callbacks
+    pCharBaud->setCallbacks(new IntPropertyValueCB((int32_t*)&sampleRate, onSampleRateUpdate));
+
+    // Add descriptor to that service (char user description)
+    BLEDescriptor * pDesc = new BLEDescriptor((uint16_t)kBLEDescCharNameUUID);
+    std::string descStr = "Sample Rate (sec)";
+    pDesc->setValue(descStr);
+    pCharBaud->addDescriptor(pDesc);
+
+    pDesc = new BLEDescriptor((uint16_t)kBLEDescSFEPropTypeUUID);  // Property type
+    uint8_t data=kSFEPropTypeRange;
+    pDesc->setValue(&data,1);
+    pCharBaud->addDescriptor(pDesc);
+
+    // set the range of the slider (min and max)
+
+    pDesc = new BLEDescriptor((uint16_t)kBLEDescSFEPropRangeMinUUID);  // min
+    pDesc->setValue((uint8_t*)&sampleRateMin, sizeof(sampleRateMin));
+    pCharBaud->addDescriptor(pDesc);
+
+    pDesc = new BLEDescriptor((uint16_t)kBLEDescSFEPropRangeMaxUUID);  // max
+    pDesc->setValue((uint8_t*)&sampleRateMax, sizeof(sampleRateMax));
+    pCharBaud->addDescriptor(pDesc);
+
+}
+
+//---------------------------------------------------------------------------------
 
 void setup() {
     Serial.begin(115200);
@@ -192,7 +263,12 @@ void setup() {
     BLEService *pService = pServer->createService(kTargetServiceUUID);
 
     //Setup characterstics
+    setupSampleRateCharacteristic(pService);
     setupBaudCharacteristic(pService);
+
+    setupMessageCharacteristic(pService);
+
+    setupEnabledCharacteristic(pService);
 
     //Begin broadcasting
     pService->start();
