@@ -84,6 +84,8 @@ void enbabledUpdateCB(BLEDevice central, BLECharacteristic theChar){
     theChar.readValue(newValue); // no readValue for bools
     bIsEnabled = (boolean)newValue;
     Serial.println(bIsEnabled);
+
+    digitalWrite(LED_BUILTIN, (bIsEnabled ? HIGH : LOW));
 }
 void buadRateUpdateCB(BLEDevice central, BLECharacteristic theChar){
 
@@ -169,7 +171,7 @@ void setup() {
 
     // led to display when connected
     pinMode(LED_BUILTIN, OUTPUT);
-
+    digitalWrite(LED_BUILTIN, (bIsEnabled ? HIGH : LOW));
     // start BLE
     if ( ! BLE.begin()){
         Serial.println("starting BLE failed!");
