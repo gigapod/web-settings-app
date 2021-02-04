@@ -12,7 +12,6 @@
 
   ESP32 with chrome: https://github.com/kpatel122/ESP32-Web-Bluetooth-Terminal/blob/master/ESP32-BLE/ESP32-BLE.ino
 */
-#include <lwip/inet.h>  // for endianess 
 #include <string>
 #include <BLEDevice.h>
 #include <BLEUtils.h>
