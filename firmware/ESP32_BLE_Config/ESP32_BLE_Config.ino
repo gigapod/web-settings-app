@@ -19,6 +19,7 @@
 
 #include "ESP32_BLE_Config.h"
 
+#define LED_BUILTIN 13
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
 
@@ -102,6 +103,8 @@ void onEnabledUpdate(bool newValue){
 
     Serial.print("Update Enabled Value: "); 
     Serial.println(deviceEnabled);
+    deviceEnabled = newValue;
+    digitalWrite(LED_BUILTIN, (deviceEnabled ? HIGH : LOW));    
 }
 void setupEnabledCharacteristic(BLEService *pService){
 
@@ -287,6 +290,9 @@ void setup() {
     pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
     pAdvertising->setMinPreferred(0x12);
     BLEDevice::startAdvertising();
+
+    pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, (deviceEnabled ? HIGH : LOW));
 
     Serial.println("BLE Started");
 }
