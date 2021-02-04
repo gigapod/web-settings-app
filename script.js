@@ -29,6 +29,7 @@ const kSFEPropTypeRange     = 0x3;
 const kSFEPropTypeText      = 0x4;
 
 
+var bIsConnected = false;
 // Simple Data marshling code
 
 const textDecoder = new TextDecoder();
@@ -44,6 +45,10 @@ const properties=[];
 function setDeviceName(name){
     document.getElementById("settings-title").innerHTML= name+ " Settings";
 }
+
+//---------------------------------------
+// property things
+//---------------------------------------
 // Used to main unique ids for property objects
 let namecnt = 0;
 
@@ -53,6 +58,7 @@ class Property{
     constructor(bleChar){
       	this.characteristic = bleChar;
     	this.ID = "property-" + namecnt++;  // unique id for the DOM
+        this.div = null;
     }
 
     init(){
@@ -73,23 +79,32 @@ class Property{
     }
 
     generateElement(){} // stub
+
+    deleteElement(){
+
+        if(!this.div){
+            return;
+        }
+        this.div.remove();
+        this.div=null;
+    }
 }
 // -------------------------------------------
 class boolProperty extends Property{
 
    	generateElement(){
 
-   	    let div = document.createElement("div");
+   	    this.div = document.createElement("div");
 
-   		div.innerHTML = `
+   		this.div.innerHTML = `
 	   		<div class="setting">
 				<input type="checkbox" id="`+ this.ID + `" />
 				<label for="` + this.ID + `">` + this.name + `</label>
 			</div>
    		`;
 
-   		document.getElementById(targetID).appendChild(div);
-   		this.inputField = div.querySelector('input');
+   		document.getElementById(targetID).appendChild(this.div);
+   		this.inputField = this.div.querySelector('input');
 
         // event handler wireup - on change event, save the new value to BLE device
    		this.inputField.addEventListener("change", () => {
@@ -146,17 +161,17 @@ class rangeProperty extends Property{
     //------------------------
    	generateElement(){
 
-   		let div = document.createElement("div");
-   		div.innerHTML = `
+   		this.div = document.createElement("div");
+   		this.div.innerHTML = `
    			<div class="length range__slider" data-min="`+ this.min +`" data-max="` + this.max +`">
 				<div class="length__title field-title" data-length='0'>`+ this.name +`:</div>
 				<input id="slider" type="range" min="`+ this.min +`" max="`+ this.max +`" value="16" />
 			</div>
    		`;
-		this.input = div.querySelector('input');
-		this.txtValue = div.querySelector('.length__title');
+		this.input = this.div.querySelector('input');
+		this.txtValue = this.div.querySelector('.length__title');
 
-   		document.getElementById(targetID).appendChild(div);
+   		document.getElementById(targetID).appendChild(this.div);
    			
    		// Update slider values - event handler
    		this.input.addEventListener("input", event => {
@@ -179,7 +194,6 @@ class rangeProperty extends Property{
    	updateValue(){
         // get the value from the BLE char and place it in the field
         this.characteristic.readValue().then( value =>{
-            console.log(`The  ${this.name} is: ${value.getInt32(0, true)}`);
             this.input.value = value.getInt32(0, true);
            // send an event to the thing to trigger ui update
            this.input.dispatchEvent(new Event('input'));
@@ -203,16 +217,16 @@ class textProperty extends Property{
 
    	generateElement(){
 
-   		let div = document.createElement("div");
-   		div.innerHTML = `
+   		this.div = document.createElement("div");
+   		this.div.innerHTML = `
 	   		<div class="text-prop">
 				<input type="text" id="`+ this.ID + `" />
 				<label for="` + this.ID + `">` + this.name + `</label>
 			</div>
    		`;
-   		document.getElementById(targetID).appendChild(div);
+   		document.getElementById(targetID).appendChild(this.div);
 
-   		this.inputField = div.querySelector('input');
+   		this.inputField = this.div.querySelector('input');
    		this.inputField.addEventListener("change", () => {
    			this.saveValue();
    		});
@@ -254,16 +268,16 @@ class intProperty extends Property{
 
    	generateElement(){
 
-   		let div = document.createElement("div");
-   		div.innerHTML = `
+   		this.div = document.createElement("div");
+   		this.div.innerHTML = `
 	   		<div class="number-prop">
 				<input type="text" id="`+ this.ID + `" onkeypress="return isNumberKey(event)"/>
 				<label for="` + this.ID + `">` + this.name + `</label>
 			</div>
    		`;
-   		document.getElementById(targetID).appendChild(div);
+   		document.getElementById(targetID).appendChild(this.div);
 
-   		this.inputField = div.querySelector('input');
+   		this.inputField = this.div.querySelector('input');
    		this.inputField.addEventListener("change", () => {
    			this.saveValue();
    		});
@@ -273,7 +287,6 @@ class intProperty extends Property{
     updateValue(){
         // get the value from the BLE char and place it in the field
         this.characteristic.readValue().then( value =>{
-            console.log(`The  ${this.name} is: ${value.getInt32(0, true)}`);
             this.inputField.value = value.getInt32(0, true);
         });
     }
@@ -301,9 +314,8 @@ function addPropertyToSystem(bleCharacteristic){
 
         // Get the value of the type descriptor
         desc.readValue().then(value =>{
-            let type = value.getUint8(0,0);
 
-            console.log("Descriptor Property Type: " + type);
+            let type = value.getUint8(0,0);
 
             if(type < kSFEPropTypeBool || type > kSFEPropTypeText ){
                 console.log("Invalid Type value: " + type);
@@ -321,9 +333,47 @@ function addPropertyToSystem(bleCharacteristic){
         console.log(error);
     });
 }
+
+function deleteProperties(){
+
+    while(properties.length > 0){
+        properties[0].deleteElement(); // delete UI
+        properties.splice(0,1);
+    }
+}
 //--------------------------------------------------------------------------------------
 // BLE Logic
 //--------------------------------------------------------------------------------------
+
+let theGattServer = null;
+
+function disconnectBLEService(){
+
+
+    if( theGattServer != null && theGattServer.connected){
+        theGattServer.disconnect();
+
+        theGattServer = null;
+    }    
+
+    document.getElementById("connect").innerHTML ="Connect To " + kTargetServiceName;
+
+    // Delete our properties....
+    deleteProperties();
+
+}
+function bleConnected(gattServer){
+
+    if(!gattServer || !gattServer.connected){
+        return;
+    }
+    theGattServer = gattServer;
+
+    // update button label
+    document.getElementById("connect").innerHTML ="Disconnect From " + kTargetServiceName;
+    
+}
+
 function connectToBLEService() {
 
     let filters = [];
@@ -343,6 +393,7 @@ function connectToBLEService() {
 
         return device.gatt.connect().then(gattServer => {
             
+            bleConnected(gattServer);
             // Connect to our target Service 
             gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
 
@@ -374,9 +425,14 @@ function connectToBLEService() {
 //--------------------------------------------------------------------------------------
 // Misc Items
 //--------------------------------------------------------------------------------------
-  
-// Wire up button events
+
+// The connect button 
 let connectBtn = document.getElementById("connect")
 connectBtn.addEventListener("click", () => {
-    connectToBLEService();
-});  
+    if(theGattServer && theGattServer.connected){
+        disconnectBLEService();
+    }else{
+        connectToBLEService();
+    }
+
+});

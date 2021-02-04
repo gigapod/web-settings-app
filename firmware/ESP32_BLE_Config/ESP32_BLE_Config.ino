@@ -260,18 +260,24 @@ void setup() {
 
     BLEServer *pServer = BLEDevice::createServer();
     pServer->setCallbacks(new MyServerCallbacks());
-    BLEService *pService = pServer->createService(kTargetServiceUUID);
+
+    // >>> NOTE <<<
+    // When creating a service. The default - when you just pass in a UUID,
+    // only creates 15 handles. This isn't enough to support the 4 characteristics 
+    // in this demo. Setting this to 20 allows for 4 Characteristics.
+    // see: https://github.com/nkolban/ESP32_BLE_Arduino/blob/master/src/BLEServer.cpp
+    BLEService *pService = pServer->createService(BLEUUID(kTargetServiceUUID), 20, 1);
 
     //Setup characterstics
     setupSampleRateCharacteristic(pService);
     setupBaudCharacteristic(pService);
-
     setupMessageCharacteristic(pService);
-
     setupEnabledCharacteristic(pService);
 
-    //Begin broadcasting
     pService->start();
+
+    //Begin broadcasting
+
     BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
     // NOTE: this will broadcast service so it's discoverable before 
     //       device connection. Helps when using BLE scanner
@@ -282,7 +288,6 @@ void setup() {
     pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
     pAdvertising->setMinPreferred(0x12);
     BLEDevice::startAdvertising();
-
 
     Serial.println("BLE Started");
 }
