@@ -54,8 +54,8 @@ BLEDescriptor descBaudRateType(kBLEDescSFEPropTypeUUID, &kSFEPropTypeInt, sizeof
 
 // Third Characteristic - Message - string - a string message for the service
 String strMessage = "Welcome";
-// Note: Setting max value size of 64 ...
-BLEStringCharacteristic bleCharMessage(kCharacteristicMessageUUID, BLERead | BLENotify | BLEWrite, 64);
+// Note: Setting max value size of kMessage Max  
+BLEStringCharacteristic bleCharMessage(kCharacteristicMessageUUID, BLERead | BLENotify | BLEWrite, kMessageMax);
 BLEDescriptor descMessageName(kBLEDescCharNameUUID, "Device Message");
 BLEDescriptor descMessageType(kBLEDescSFEPropTypeUUID, &kSFEPropTypeText, sizeof(kSFEPropTypeText) );
 
@@ -100,8 +100,7 @@ void messageUpdateCB(BLEDevice central, BLECharacteristic theChar){
 
 
     if(theChar.valueLength() >= sizeof(buffer)){
-        Serial.println("Message Update - message too long");
-        return;
+        Serial.println("Message Update - new value too long - value truncated");
     }
     theChar.readValue((void*)buffer, sizeof(buffer));
 
@@ -125,6 +124,7 @@ void setupBLECharacteristics(BLEService& theService){
     theService.addCharacteristic(bleCharEnabled);  
     bleCharEnabled.setValue(bIsEnabled);
     bleCharEnabled.setEventHandler(BLEWritten, enbabledUpdateCB);
+
     // The BaudRate char
     bleCharBaudRate.addDescriptor(descBaudRateName);
     bleCharBaudRate.addDescriptor(descBaudRateType);
@@ -137,7 +137,8 @@ void setupBLECharacteristics(BLEService& theService){
     bleCharMessage.addDescriptor(descMessageType);
     theService.addCharacteristic(bleCharMessage);  
     bleCharMessage.setValue(strMessage);
-    bleCharMessage.setEventHandler(BLEWritten, messageUpdateCB);             
+    bleCharMessage.setEventHandler(BLEWritten, messageUpdateCB);    
+
     // The Sample Rate char
     bleCharSampleRate.addDescriptor(descSampleRateName);
     bleCharSampleRate.addDescriptor(descSampleRateType);
@@ -172,6 +173,7 @@ void setup() {
     // led to display when connected
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, (bIsEnabled ? HIGH : LOW));
+
     // start BLE
     if ( ! BLE.begin()){
         Serial.println("starting BLE failed!");
@@ -199,6 +201,7 @@ void setup() {
 
 void loop()
 {
+    // everything is handled in callbacks.
     BLE.poll();
 
 }
