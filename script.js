@@ -40,7 +40,9 @@ function textToData(text){ return textEncoder.encode(text);}
 
 	
 const targetID = 'settings-container';
-const properties=[];
+
+
+const currentProperties=[];
 
 function setDeviceName(name){
     document.getElementById("settings-title").innerHTML= name+ " Settings";
@@ -299,48 +301,64 @@ class intProperty extends Property{
         this.characteristic.writeValue(buff);
     }
 }
+// --------------------
+// Delete all properties
+function deleteProperties(){
 
+    while(currentProperties.length > 0){
+        currentProperties[0].deleteElement(); // delete UI
+        currentProperties.splice(0,1); // pop out of array
+    }
+    document.getElementById(targetID).style.display="none"; // hide settings area
+}
+
+function showProperties(){ 
+
+    if(currentProperties.length > 0){
+        document.getElementById(targetID).style.display="flex"; 
+    }
+}
 //--------------------------------------------------------------------------------------
 // Add a property to the system based on a BLE Characteristic
 //
 // Our property object defs = KEY: The order is same as type code index above. 
 const propFactory = [boolProperty, intProperty, rangeProperty, textProperty];
 
-
+// use a promise to encapsulate the async BLE calls
 function addPropertyToSystem(bleCharacteristic){
 
-    // Get the type descriptor
-    bleCharacteristic.getDescriptor(kBLEDescSFEPropTypeUUID).then(desc =>{
+    // use a promise to encapsualte this add - might be overkill ... but 
+    // with a lot of props ...
+    return new Promise( (resolve) => {
+        // Get the type descriptor
+        bleCharacteristic.getDescriptor(kBLEDescSFEPropTypeUUID).then(desc =>{
 
-        // Get the value of the type descriptor
-        desc.readValue().then(value =>{
+            // Get the value of the type descriptor
+            desc.readValue().then(value =>{
 
-            let type = value.getUint8(0,0);
+                let type = value.getUint8(0,0);
 
-            if(type < kSFEPropTypeBool || type > kSFEPropTypeText ){
-                console.log("Invalid Type value: " + type);
-                return;
-            }
-            // build prop object - notice index into array of prop class defs 
-            let property = new propFactory[type-1](bleCharacteristic);            
-            properties.push(property);
-            // init our property
-            property.init();
+                if(type < kSFEPropTypeBool || type > kSFEPropTypeText ){
+                    console.log("Invalid Type value: " + type);
+                    resolve(1);
+                }
+                // build prop object - notice index into array of prop class defs 
+                let property = new propFactory[type-1](bleCharacteristic);   
 
+                currentProperties.push(property);
+
+                // init our property
+                property.init();
+                resolve(0);
+            });
+        }).catch(error => {
+            console.log("getDescriptor - property type failed");
+            console.log(error);
+            resolve(1);
         });
-    }).catch(error => {
-        console.log("getDescriptor - property type failed");
-        console.log(error);
     });
 }
 
-function deleteProperties(){
-
-    while(properties.length > 0){
-        properties[0].deleteElement(); // delete UI
-        properties.splice(0,1);
-    }
-}
 //--------------------------------------------------------------------------------------
 // BLE Logic
 //--------------------------------------------------------------------------------------
@@ -376,9 +394,8 @@ function onDisconnected(){
     // Delete our properties....
     deleteProperties();
 
-    if(theGattServer){
-        theGattServer=null;
-    }
+    theGattServer=null;
+
 }
 function connectToBLEService() {
 
@@ -409,9 +426,16 @@ function connectToBLEService() {
                 primaryService.getCharacteristics().then(theCharacteristics => {                
 
                     // Add the characteristics to the property sheet
+                    // The adds are async - so use promises and then
+                    // once everything is added, show the props UX all at once.
+                    const promises=[];
                     for(const aChar of theCharacteristics){
-                        addPropertyToSystem(aChar);                        
+                        promises.push(addPropertyToSystem(aChar));
                     }
+                    Promise.all(promises).then((results)=>{
+                        // still found the UX isn't all there yet ... wait a cycle or 2
+                        setTimeout(function(){showProperties();}, 300);
+                    });
 
                 }).catch(error => {
                     console.log("getCharacteristics error");
