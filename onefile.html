@@ -302,20 +302,18 @@ a {
 a:hover {
   color: #222;
 }
+
+	
 	
 </style>
+
+
 </head>
 <body>
 <!-- partial:index.partial.html -->
 <div class="container">
 	<h2 class="title" id='settings-title'>Artemis OpenLog Settings</h2>
 	<button class="btn generate" id="connect">Connect to OpenLog</button>
-	<!--
-	<button class="btn generate" id="add-toggle">Add Toggle</button>	
-	<button class="btn generate" id="add-range">Add Range</button>		
-	<button class="btn generate" id="add-text">Add Text</button>			
-	<button class="btn generate" id="add-number">Add Number</button>				
--->
 	<div class="settings" id="settings-container">
 		<h2 class="title">Settings</h2>		
 		
@@ -326,9 +324,7 @@ a:hover {
 
 
 
-<!-- Javascript to run this thing -->
 <script>
-  	
 
 // App to connect to an embedded device (like SparkFun OpenLog) and manage settings via BLE
 
@@ -687,11 +683,6 @@ function disconnectBLEService(){
         theGattServer = null;
     }    
 
-    document.getElementById("connect").innerHTML ="Connect To " + kTargetServiceName;
-
-    // Delete our properties....
-    deleteProperties();
-
 }
 function bleConnected(gattServer){
 
@@ -704,7 +695,18 @@ function bleConnected(gattServer){
     document.getElementById("connect").innerHTML ="Disconnect From " + kTargetServiceName;
     
 }
+// disconnect event handler.
+function onDisconnected(){
 
+    document.getElementById("connect").innerHTML ="Connect To " + kTargetServiceName;
+
+    // Delete our properties....
+    deleteProperties();
+
+    if(theGattServer){
+        theGattServer=null;
+    }
+}
 function connectToBLEService() {
 
     let filters = [];
@@ -721,6 +723,8 @@ function connectToBLEService() {
         
         if(device.name)
             setDeviceName(device.name);
+
+        device.addEventListener('gattserverdisconnected', onDisconnected);
 
         return device.gatt.connect().then(gattServer => {
             
@@ -769,9 +773,8 @@ connectBtn.addEventListener("click", () => {
 });
 window.onload = function(){
     setDeviceName(kTargetServiceName);
-    
-}
 
+}
 </script>
 
 </body>
