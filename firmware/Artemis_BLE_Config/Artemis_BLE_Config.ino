@@ -100,7 +100,7 @@ void messageUpdateCB(BLEDevice central, BLECharacteristic theChar){
 
 
     if(theChar.valueLength() >= sizeof(buffer)){
-        Serial.println("Message Update - new value too long - value truncated");
+        Serial.println("Message Update - new message too long - truncating");
     }
     theChar.readValue((void*)buffer, sizeof(buffer));
 
