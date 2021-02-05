@@ -44,6 +44,9 @@
 #define kSFEPropTypeInt        0x2
 #define kSFEPropTypeRange      0x3
 #define kSFEPropTypeText       0x4
+#define kSFEPropTypeDate       0x5
+#define kSFEPropTypeTime       0x6
+#define kSFEPropTypeFloat       0x7
 
 
 // Our Characteristic UUIDs - and yes, just made these up
@@ -51,6 +54,9 @@
 #define kCharacteristicEnabledUUID  "beb5483e-36e1-4688-b7f5-ea07361b26a9"
 #define kCharacteristicMessageUUID  "beb5483e-36e1-4688-b7f5-ea07361b26aa"
 #define kCharacteristicSampleUUID   "beb5483e-36e1-4688-b7f5-ea07311b260b"
+#define kCharacteristicDateUUID     "beb5483e-36e1-4688-b7f5-ea07311b260c"
+#define kCharacteristicTimeUUID     "beb5483e-36e1-4688-b7f5-ea07311b260d"
+#define kCharacteristicOffsetUUID     "beb5483e-36e1-4688-b7f5-ea07311b260e"
 
 
 // PROPERTY Data/Local Variables
@@ -58,12 +64,22 @@ uint32_t baudRate = 115200;
 
 bool deviceEnabled = true;
 
+// message prop
 std::string strMessage("Welcome");
 
+// sample rate prop (a range)
 uint32_t sampleRate = 123;
-
 const uint32_t sampleRateMin = 10;
 const uint32_t sampleRateMax = 240;
+
+// Date prop - date is a string "YYYY-MM-DD"
+std::string strDate("2021-03-01");
+
+// Time prop - date is a string "HH:MM"
+std::string strTime("12:05");
+
+// A float property - "offset value"
+float offsetValue = 4.124;
 
 bool deviceConnected = false;
 bool newConfig = true;
@@ -218,40 +234,146 @@ void onSampleRateUpdate(int32_t newValue){
 void setupSampleRateCharacteristic(BLEService *pService){
 
 
-    BLECharacteristic *pCharBaud;
+    BLECharacteristic *pCharRate;
 
-    pCharBaud = pService->createCharacteristic(
+    pCharRate = pService->createCharacteristic(
                             kCharacteristicSampleUUID,
                             BLECharacteristic::PROPERTY_READ  |
                             BLECharacteristic::PROPERTY_WRITE |
                             BLECharacteristic::PROPERTY_NOTIFY );
 
     // Set the value in the callbacks - can just use the int callbacks
-    pCharBaud->setCallbacks(new IntPropertyValueCB((int32_t*)&sampleRate, onSampleRateUpdate));
+    pCharRate->setCallbacks(new IntPropertyValueCB((int32_t*)&sampleRate, onSampleRateUpdate));
 
     // Add descriptor to that service (char user description)
     BLEDescriptor * pDesc = new BLEDescriptor((uint16_t)kBLEDescCharNameUUID);
     std::string descStr = "Sample Rate (sec)";
     pDesc->setValue(descStr);
-    pCharBaud->addDescriptor(pDesc);
+    pCharRate->addDescriptor(pDesc);
 
     pDesc = new BLEDescriptor((uint16_t)kBLEDescSFEPropTypeUUID);  // Property type
     uint8_t data=kSFEPropTypeRange;
     pDesc->setValue(&data,1);
-    pCharBaud->addDescriptor(pDesc);
+    pCharRate->addDescriptor(pDesc);
 
     // set the range of the slider (min and max)
 
     pDesc = new BLEDescriptor((uint16_t)kBLEDescSFEPropRangeMinUUID);  // min
     pDesc->setValue((uint8_t*)&sampleRateMin, sizeof(sampleRateMin));
-    pCharBaud->addDescriptor(pDesc);
+    pCharRate->addDescriptor(pDesc);
 
     pDesc = new BLEDescriptor((uint16_t)kBLEDescSFEPropRangeMaxUUID);  // max
     pDesc->setValue((uint8_t*)&sampleRateMax, sizeof(sampleRateMax));
-    pCharBaud->addDescriptor(pDesc);
+    pCharRate->addDescriptor(pDesc);
 
 }
 
+//---------------------------------------------------------------------------------
+// Date Characterisitic 
+//
+// A Date Characterisitic (property) example - format is a string "YYYY-MM-DD"
+
+void onDateUpdate(std::string &  newValue){
+
+    Serial.print("Update Date Value: "); 
+    Serial.println(newValue.c_str());
+}
+void setupDateCharacteristic(BLEService *pService){
+
+    BLECharacteristic *pCharDate;
+
+    pCharDate = pService->createCharacteristic(
+                            kCharacteristicDateUUID,
+                            BLECharacteristic::PROPERTY_READ  |
+                            BLECharacteristic::PROPERTY_WRITE |
+                            BLECharacteristic::PROPERTY_NOTIFY );
+
+    // Set the value in the callbacks 
+    pCharDate->setCallbacks(new TextPropertyValueCB(strDate, onDateUpdate));
+
+    // Add descriptor to that service (char user description)
+    BLEDescriptor * pDesc = new BLEDescriptor((uint16_t)kBLEDescCharNameUUID);
+    std::string descStr = "Start Date";
+    pDesc->setValue(descStr);
+    pCharDate->addDescriptor(pDesc);
+
+    pDesc = new BLEDescriptor((uint16_t)kBLEDescSFEPropTypeUUID);  // Property type
+    uint8_t data=kSFEPropTypeDate;
+    pDesc->setValue(&data,1);
+    pCharDate->addDescriptor(pDesc);
+
+}
+//---------------------------------------------------------------------------------
+// Time Characterisitic 
+//
+// A Time Characterisitic (property) example - format is a string "HH:MM"
+
+void onTimeUpdate(std::string &  newValue){
+
+    Serial.print("Update Time Value: "); 
+    Serial.println(newValue.c_str());
+}
+void setupTimeCharacteristic(BLEService *pService){
+
+    BLECharacteristic *pCharTime;
+
+    pCharTime = pService->createCharacteristic(
+                            kCharacteristicTimeUUID,
+                            BLECharacteristic::PROPERTY_READ  |
+                            BLECharacteristic::PROPERTY_WRITE |
+                            BLECharacteristic::PROPERTY_NOTIFY );
+
+    // Set the value in the callbacks 
+    pCharTime->setCallbacks(new TextPropertyValueCB(strTime, onTimeUpdate));
+
+    // Add descriptor to that service (char user description)
+    BLEDescriptor * pDesc = new BLEDescriptor((uint16_t)kBLEDescCharNameUUID);
+    std::string descStr = "Start Time";
+    pDesc->setValue(descStr);
+    pCharTime->addDescriptor(pDesc);
+
+    pDesc = new BLEDescriptor((uint16_t)kBLEDescSFEPropTypeUUID);  // Property type
+    uint8_t data=kSFEPropTypeTime;
+    pDesc->setValue(&data,1);
+    pCharTime->addDescriptor(pDesc);
+
+}
+
+//---------------------------------------------------------------------------------
+// FLoat Characterisitic 
+//
+// A float Characterisitic (property) example 
+
+void onOffsetUpdate(float newValue){
+
+    Serial.print("Update Offset(float) Value: "); 
+    Serial.println(newValue);
+}
+void setupOffsetCharacteristic(BLEService *pService){
+
+    BLECharacteristic *pCharOff;
+
+    pCharOff = pService->createCharacteristic(
+                            kCharacteristicOffsetUUID,
+                            BLECharacteristic::PROPERTY_READ  |
+                            BLECharacteristic::PROPERTY_WRITE |
+                            BLECharacteristic::PROPERTY_NOTIFY );
+
+    // Set the value in the callbacks 
+    pCharOff->setCallbacks(new FloatPropertyValueCB(&offsetValue, onOffsetUpdate));
+
+    // Add descriptor to that service (char user description)
+    BLEDescriptor * pDesc = new BLEDescriptor((uint16_t)kBLEDescCharNameUUID);
+    std::string descStr = "Offset Bias";
+    pDesc->setValue(descStr);
+    pCharOff->addDescriptor(pDesc);
+
+    pDesc = new BLEDescriptor((uint16_t)kBLEDescSFEPropTypeUUID);  // Property type
+    uint8_t data=kSFEPropTypeFloat;
+    pDesc->setValue(&data,1);
+    pCharOff->addDescriptor(pDesc);
+
+}
 //---------------------------------------------------------------------------------
 
 void setup() {
@@ -268,13 +390,16 @@ void setup() {
     // only creates 15 handles. This isn't enough to support the 4 characteristics 
     // in this demo. Setting this to 20 allows for 4 Characteristics.
     // see: https://github.com/nkolban/ESP32_BLE_Arduino/blob/master/src/BLEServer.cpp
-    BLEService *pService = pServer->createService(BLEUUID(kTargetServiceUUID), 20, 1);
+    BLEService *pService = pServer->createService(BLEUUID(kTargetServiceUUID), 35, 1);
 
     //Setup characterstics
     setupSampleRateCharacteristic(pService);
     setupBaudCharacteristic(pService);
     setupMessageCharacteristic(pService);
     setupEnabledCharacteristic(pService);
+    setupDateCharacteristic(pService);
+    setupTimeCharacteristic(pService); 
+    setupOffsetCharacteristic(pService);   
 
     pService->start();
 

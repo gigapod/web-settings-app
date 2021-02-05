@@ -27,6 +27,9 @@ const kSFEPropTypeBool      = 0x1;
 const kSFEPropTypeInt       = 0x2;
 const kSFEPropTypeRange     = 0x3;
 const kSFEPropTypeText      = 0x4;
+const kSFEPropTypeDate      = 0x5;
+const kSFEPropTypeTime      = 0x6;
+const kSFEPropTypeFloat     = 0x6;
 
 
 var bIsConnected = false;
@@ -256,24 +259,15 @@ class textProperty extends Property{
 
 //-------------------------------------------------------------
 // intProperty Object
-
-// Function to limit text entry to numbers
-   
-function isNumberKey(evt){
-    let charCode = (evt.which) ? evt.which : evt.keyCode
-    if (charCode > 31 && (charCode < 48 || charCode > 57))
-        return false;
-    return true;
-}
-	
 class intProperty extends Property{
 
    	generateElement(){
 
    		this.div = document.createElement("div");
+
    		this.div.innerHTML = `
 	   		<div class="number-prop">
-				<input type="text" id="`+ this.ID + `" onkeypress="return isNumberKey(event)"/>
+        <input type="number" id="`+ this.ID + `" step="1" />
 				<label for="` + this.ID + `">` + this.name + `</label>
 			</div>
    		`;
@@ -301,6 +295,126 @@ class intProperty extends Property{
         this.characteristic.writeValue(buff);
     }
 }
+//-------------------------------------------------------------
+// dateProperty Object
+class dateProperty extends Property{
+
+    generateElement(){
+
+        this.div = document.createElement("div");
+        this.div.innerHTML = `
+            <div class="date-prop">
+                <input type="date" id="`+ this.ID + `" />
+                <label for="` + this.ID + `">` + this.name + `</label>
+            </div>
+        `;
+        document.getElementById(targetID).appendChild(this.div);
+
+        this.inputField = this.div.querySelector('input');
+        this.inputField.addEventListener("change", () => {
+            this.saveValue();
+        });
+        this.updateValue();             
+    }
+
+    updateValue(){
+        // get the value from the BLE char and place it in the field
+        //console.log("Update Value Text");
+        //this.inputField = "2021-02-02";
+
+        // get the value from the BLE char and place it in the field
+        this.characteristic.readValue().then( value =>{
+          //console.log(`The  ${this.name} is: ${value.getUint32(0, true)}`);
+          this.inputField.value = dataToText(value);
+
+        });
+    }
+
+    saveValue(){
+        // Get the value from the input field and save it to the characteristic
+        //console.log("Save Value Text: " + this.inputField.value);
+        this.characteristic.writeValue(textToData(this.inputField.value));
+    }
+}
+
+//-------------------------------------------------------------
+// timeProperty Object
+class timeProperty extends Property{
+
+    generateElement(){
+
+        this.div = document.createElement("div");
+        this.div.innerHTML = `
+            <div class="time-prop">
+                <input type="time" id="`+ this.ID + `" />
+                <label for="` + this.ID + `">` + this.name + `</label>
+            </div>
+        `;
+        document.getElementById(targetID).appendChild(this.div);
+
+        this.inputField = this.div.querySelector('input');
+        this.inputField.addEventListener("change", () => {
+            this.saveValue();
+        });
+        this.updateValue();             
+    }
+
+    updateValue(){
+        // get the value from the BLE char and place it in the field
+        //console.log("Update Value Text");
+        //this.inputField = "2021-02-02";
+
+        // get the value from the BLE char and place it in the field
+        this.characteristic.readValue().then( value =>{
+          //console.log(`The  ${this.name} is: ${value.getUint32(0, true)}`);
+          this.inputField.value = dataToText(value);
+
+        });
+    }
+
+    saveValue(){
+        // Get the value from the input field and save it to the characteristic
+        //console.log("Save Value Text: " + this.inputField.value);
+        this.characteristic.writeValue(textToData(this.inputField.value));
+    }
+}
+class floatProperty extends Property{
+
+    generateElement(){
+
+      this.div = document.createElement("div");
+      this.div.innerHTML = `
+        <div class="number-prop">
+        <input type="number" id="`+ this.ID + `" step=".001" />
+        <label for="` + this.ID + `">` + this.name + `</label>
+      </div>
+      `;
+      document.getElementById(targetID).appendChild(this.div);
+
+      this.inputField = this.div.querySelector('input');
+      this.inputField.addEventListener("change", () => {
+        this.saveValue();
+      });
+      this.updateValue();         
+    }
+
+    updateValue(){
+        // get the value from the BLE char and place it in the field
+        this.characteristic.readValue().then( value =>{
+            // We are limiting floats to three decimal places.
+            // Round out the floating number noise
+            this.inputField.value = Math.round((value.getFloat32(0,true) + Number.EPSILON)*1000)/1000;
+        });
+    }
+
+    saveValue(){
+        // Get the value from the input field and save it to the characteristic
+        let buff = new ArrayBuffer(4);
+        let newValue = new Float32Array(buff);
+        newValue[0] = this.inputField.value;
+        this.characteristic.writeValue(buff);
+    }
+}
 // --------------------
 // Delete all properties
 function deleteProperties(){
@@ -322,7 +436,8 @@ function showProperties(){
 // Add a property to the system based on a BLE Characteristic
 //
 // Our property object defs = KEY: The order is same as type code index above. 
-const propFactory = [boolProperty, intProperty, rangeProperty, textProperty];
+const propFactory = [boolProperty, intProperty, rangeProperty, textProperty, dateProperty, 
+                     timeProperty, floatProperty];
 
 // use a promise to encapsulate the async BLE calls
 function addPropertyToSystem(bleCharacteristic){
@@ -338,7 +453,7 @@ function addPropertyToSystem(bleCharacteristic){
 
                 let type = value.getUint8(0,0);
 
-                if(type < kSFEPropTypeBool || type > kSFEPropTypeText ){
+                if(type < kSFEPropTypeBool || type > propFactory.length ){
                     console.log("Invalid Type value: " + type);
                     resolve(1);
                 }

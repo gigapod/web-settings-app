@@ -33,8 +33,8 @@ public:
     {
      
         int32_t newValue = stringToValue(theCharacteristic->getValue());
-        Serial.print("Integer Prop new value: ");
-        Serial.println(newValue);
+       // Serial.print("Integer Prop new value: ");
+       // Serial.println(newValue);
         if(pValue)
             *pValue = newValue;
         _onSetCB(newValue);
@@ -44,8 +44,8 @@ public:
     void onRead(BLECharacteristic *theCharacteristic){
 
       // for debugging
-      Serial.print("Integer Property Requested: "); 
-      Serial.println(*pValue);
+     // Serial.print("Integer Property Requested: "); 
+     // Serial.println(*pValue);
 
       theCharacteristic->setValue(*pValue);      
 
@@ -55,6 +55,44 @@ private:
     int32_t *pValue;
 };
 
+//---------------------------------------------------
+class FloatPropertyValueCB: public BLECharacteristicCallbacks {
+
+public:
+    FloatPropertyValueCB( float *value, void (*updateCB)(float)) {
+
+        _onSetCB = updateCB;
+        pValue = value;
+    }
+
+    void onWrite(BLECharacteristic *theCharacteristic)
+    {
+     
+        int32_t tmpValue = stringToValue(theCharacteristic->getValue());
+
+        float newValue = *((float*)&tmpValue); // Total hack
+
+       Serial.print("Float Prop new value: ");
+       Serial.println(newValue);
+        if(pValue)
+            *pValue = newValue;
+        _onSetCB(newValue);
+
+    }
+    // I don't think this is needed
+    void onRead(BLECharacteristic *theCharacteristic){
+
+      // for debugging
+     // Serial.print("Integer Property Requested: "); 
+     // Serial.println(*pValue);
+
+      theCharacteristic->setValue(*pValue);      
+
+    }
+private:
+    void (*_onSetCB)(float);
+    float *pValue;
+};
 //---------------------------------------------------
 class BoolPropertyValueCB: public BLECharacteristicCallbacks {
 
@@ -75,8 +113,8 @@ public:
      	}
      	bool newValue = (bool)*pData;
 
-        Serial.print("BOOL Prop new Value value: ");
-        Serial.println(newValue);
+        //Serial.print("BOOL Prop new Value value: ");
+        //Serial.println(newValue);
         if(pValue)
             *pValue = newValue;
         _onSetCB(newValue);
@@ -86,8 +124,8 @@ public:
     void onRead(BLECharacteristic *theCharacteristic){
 
       // for debugging
-      Serial.print("Bool Property Requested: "); 
-      Serial.println(*pValue);
+      //Serial.print("Bool Property Requested: "); 
+      //Serial.println(*pValue);
 
       theCharacteristic->setValue((uint8_t*)pValue, 1);      
 
@@ -113,8 +151,8 @@ public:
      
      	value = theCharacteristic->getValue();
      	
-        Serial.print("string prop new value: ");
-        Serial.println(value.c_str());
+       // Serial.print("string prop new value: ");
+       // Serial.println(value.c_str());
         _onSetCB(value);
 
     }
@@ -122,8 +160,8 @@ public:
     void onRead(BLECharacteristic *theCharacteristic){
 
       // for debugging
-      Serial.print("String Property Requested: "); 
-      Serial.println(value.c_str());
+      //Serial.print("String Property Requested: "); 
+     // Serial.println(value.c_str());
 
       theCharacteristic->setValue(value);      
 

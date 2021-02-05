@@ -151,7 +151,7 @@ void setupBLECharacteristics(BLEService& theService){
 
 
 }
-// General Connect callbakcs
+// General Connect callbacks
 void blePeripheralConnectHandler(BLEDevice central) {
   // central connected event handler
   Serial.print("Connected event, central: ");
