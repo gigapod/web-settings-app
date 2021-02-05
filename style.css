@@ -20,7 +20,7 @@ button {
 
 .container {
   margin: 40px 0;
-  width: 400px;
+  width: 450px;
   /*height: 600px;*/
   padding: 10px 25px;
   background: #0a0e31;
@@ -221,7 +221,7 @@ button {
   background: #a0a0a0;
   font-weight: bold;
   font-size: 1.1rem;
-  width:40%;
+  width:45%;
   text-align: left;
 }
 
@@ -249,7 +249,7 @@ button {
   background: #a0a0a0;
   font-weight: bold;
   font-size: 1.1rem;
-  width:40%;
+  width:45%;
   text-align: right;
 }
 
@@ -276,7 +276,7 @@ button {
   background: #a0a0a0;
   font-weight: bold;
   font-size: 1.2rem;
-  width:40%;
+  width:45%;
   text-align: left;
 }
 
@@ -304,7 +304,7 @@ button {
   background: #a0a0a0;
   font-weight: bold;
   font-size: 1.2rem;
-  width:40%;
+  width:45%;
   text-align: left;
 }
 

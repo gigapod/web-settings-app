@@ -23,6 +23,9 @@ const uint8_t kSFEPropTypeBool      = 0x1;
 const uint8_t kSFEPropTypeInt       = 0x2;
 const uint8_t kSFEPropTypeRange     = 0x3;
 const uint8_t kSFEPropTypeText      = 0x4;
+const uint8_t kSFEPropTypeDate      = 0x5;
+const uint8_t kSFEPropTypeTime      = 0x6;
+const uint8_t kSFEPropTypeFloat      = 0x7;
 
 
 // Our Characteristic UUIDs - and yes, just made these up
@@ -30,6 +33,9 @@ const uint8_t kSFEPropTypeText      = 0x4;
 #define kCharacteristicEnabledUUID  "beb5483e-36e1-4688-b7f5-ea07361b26a9"
 #define kCharacteristicMessageUUID  "beb5483e-36e1-4688-b7f5-ea07361b26aa"
 #define kCharacteristicSampleUUID   "beb5483e-36e1-4688-b7f5-ea07311b260b"
+#define kCharacteristicDateUUID     "beb5483e-36e1-4688-b7f5-ea07311b260c"
+#define kCharacteristicTimeUUID     "beb5483e-36e1-4688-b7f5-ea07311b260d"
+#define kCharacteristicOffsetUUID     "beb5483e-36e1-4688-b7f5-ea07311b260e"
 
 // helper
 #define kMessageMax 64
@@ -72,6 +78,28 @@ BLEDescriptor descSampleRateMin(kBLEDescSFEPropRangeMinUUID, (uint8_t*)&sampleRa
 BLEDescriptor descSampleRateMax(kBLEDescSFEPropRangeMaxUUID, (uint8_t*)&sampleRateMax, sizeof(sampleRateMax) );
 
 
+// Fifth Characteristic - Date - date type - a date string of format "YYYY-MM-DD"
+String strDate = "2021-03-01";
+// Note: Setting max value size of kMessage Max  
+BLEStringCharacteristic bleCharDate(kCharacteristicDateUUID, BLERead | BLENotify | BLEWrite, kMessageMax);
+BLEDescriptor descDateName(kBLEDescCharNameUUID, "Start Date");
+BLEDescriptor descDateType(kBLEDescSFEPropTypeUUID, &kSFEPropTypeDate, sizeof(kSFEPropTypeDate) );
+
+// Sixth Characteristic - Time - time type - a time string of format "HH:MM"
+String strTime = "12:13";
+// Note: Setting max value size of kMessage Max  
+BLEStringCharacteristic bleCharTime(kCharacteristicTimeUUID, BLERead | BLENotify | BLEWrite, kMessageMax);
+BLEDescriptor descTimeName(kBLEDescCharNameUUID, "Start Tiime");
+BLEDescriptor descTimeType(kBLEDescSFEPropTypeUUID, &kSFEPropTypeTime, sizeof(kSFEPropTypeTime) );
+
+// Seventh Characteristic -Offset - Float type - the offset value
+// A float property - "offset value"
+float offsetValue = 4.124;
+
+BLEFloatCharacteristic bleCharOffset(kCharacteristicOffsetUUID, BLERead | BLENotify | BLEWrite);
+BLEDescriptor descOffsetName(kBLEDescCharNameUUID, "Offset Bias");
+BLEDescriptor descOffsetType(kBLEDescSFEPropTypeUUID, &kSFEPropTypeFloat, sizeof(kSFEPropTypeFloat) );
+
 //--------------- end object setup ------------------------
 const byte LED_TO_TOGGLE = 19;
 
@@ -96,13 +124,10 @@ void buadRateUpdateCB(BLEDevice central, BLECharacteristic theChar){
 
 void messageUpdateCB(BLEDevice central, BLECharacteristic theChar){
 
-    char buffer[kMessageMax];
+    char buffer[kMessageMax+1]={0}; // buffer size + null - zero out 
 
-
-    if(theChar.valueLength() >= sizeof(buffer)){
-        Serial.println("Message Update - new message too long - truncating");
-    }
-    theChar.readValue((void*)buffer, sizeof(buffer));
+    int len = theChar.valueLength();
+    theChar.readValue((void*)buffer, len > kMessageMax ? kMessageMax : len);
 
     strMessage = buffer;
     Serial.print("Message Update: ");
@@ -113,6 +138,37 @@ void sampleRateUpdateCB(BLEDevice central, BLECharacteristic theChar){
     Serial.print("Sample Rate Update: ");
     theChar.readValue(sampleRate);
     Serial.println(sampleRate);
+}
+
+void dateUpdateCB(BLEDevice central, BLECharacteristic theChar){
+
+    char buffer[kMessageMax+1]={0}; // buffer size + null - zero out 
+
+    int len = theChar.valueLength();
+    theChar.readValue((void*)buffer, len > kMessageMax ? kMessageMax : len);
+
+    strDate = buffer;
+    Serial.print("Date Update: ");
+    Serial.println(strDate);
+}
+
+void timeUpdateCB(BLEDevice central, BLECharacteristic theChar){
+
+    char buffer[kMessageMax+1]={0}; // buffer size + null - zero out 
+
+    int len = theChar.valueLength();
+    theChar.readValue((void*)buffer, len > kMessageMax ? kMessageMax : len);
+
+    strTime = buffer;
+    Serial.print("Time Update: ");
+    Serial.println(strTime);
+}
+
+void offsetUpdateCB(BLEDevice central, BLECharacteristic theChar){
+
+    Serial.print("Offset (float) Update: ");
+    theChar.readValue((void*)&offsetValue, 4);
+    Serial.println(offsetValue);
 }
 //---------------------------------------------------------------
 // Wireup the charactritics 
@@ -149,6 +205,26 @@ void setupBLECharacteristics(BLEService& theService){
 
     bleCharSampleRate.setEventHandler(BLEWritten, sampleRateUpdateCB);             
 
+    // The date char
+    bleCharDate.addDescriptor(descDateName);
+    bleCharDate.addDescriptor(descDateType);
+    theService.addCharacteristic(bleCharDate);  
+    bleCharDate.setValue(strDate);
+    bleCharDate.setEventHandler(BLEWritten, dateUpdateCB); 
+
+    // The time char
+    bleCharTime.addDescriptor(descTimeName);
+    bleCharTime.addDescriptor(descTimeType);
+    theService.addCharacteristic(bleCharTime);  
+    bleCharTime.setValue(strTime);
+    bleCharTime.setEventHandler(BLEWritten, timeUpdateCB);  
+
+    // The Offset (float) char
+    bleCharOffset.addDescriptor(descOffsetName);
+    bleCharOffset.addDescriptor(descOffsetType);
+    theService.addCharacteristic(bleCharOffset);  
+    bleCharOffset.setValue(offsetValue);
+    bleCharOffset.setEventHandler(BLEWritten, offsetUpdateCB);  
 
 }
 // General Connect callbacks

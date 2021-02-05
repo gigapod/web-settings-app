@@ -77,8 +77,12 @@ class Property{
 
                 // We have the name - call method to generate UX and complete setup
                 this.generateElement();
-// TODO ERROR HANDLING
+
+            }).catch(error => {
+                console.log(error);
             });
+        }).catch(error => {
+                console.log(error);
         });
 
     }
@@ -332,7 +336,6 @@ class dateProperty extends Property{
 
     saveValue(){
         // Get the value from the input field and save it to the characteristic
-        //console.log("Save Value Text: " + this.inputField.value);
         this.characteristic.writeValue(textToData(this.inputField.value));
     }
 }
@@ -374,7 +377,6 @@ class timeProperty extends Property{
 
     saveValue(){
         // Get the value from the input field and save it to the characteristic
-        //console.log("Save Value Text: " + this.inputField.value);
         this.characteristic.writeValue(textToData(this.inputField.value));
     }
 }
