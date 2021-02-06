@@ -3,7 +3,7 @@
 #include "ArduinoBLE.h"
 
 #define kTargetServiceUUID  "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define kTargetServiceName  "OpenLog"
+#define kTargetServiceName  "Artemis App"
 
 //--------------------------------------------------------------------------------------
 
