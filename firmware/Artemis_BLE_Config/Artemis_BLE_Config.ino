@@ -4,6 +4,7 @@
 
 #define kTargetServiceUUID  "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define kTargetServiceName  "OpenLog"
+
 //--------------------------------------------------------------------------------------
 
 //--------------------------------------------------------------------------------------
@@ -261,13 +262,14 @@ void setup() {
 
     // name the device
     BLE.setLocalName(kTargetServiceName);
-    BLE.setAdvertisedService(bleService);
+//    BLE.setAdvertisedService(bleService);    
 
     // Setup service Characteristics
     setupBLECharacteristics(bleService);
 
     // add the LED service to the BLE device
     BLE.addService(bleService);
+    BLE.setAdvertisedService(bleService);
 
     // broadcast BLE connection
     BLE.advertise();
