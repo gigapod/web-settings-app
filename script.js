@@ -514,6 +514,8 @@ function onDisconnected(){
     theGattServer=null;
 
 }
+function startConnecting(){ document.body.style.cursor = "wait";}
+function endConnecting(){ document.body.style.cursor = "default";}
 function connectToBLEService() {
 
     let filters = [];
@@ -531,6 +533,7 @@ function connectToBLEService() {
         if(device.name)
             setDeviceName(device.name);
 
+        startConnecting();
         device.addEventListener('gattserverdisconnected', onDisconnected);
 
         return device.gatt.connect().then(gattServer => {
@@ -552,22 +555,26 @@ function connectToBLEService() {
                     Promise.all(promises).then((results)=>{
                         // still found the UX isn't all there yet ... wait a cycle or 2
                         setTimeout(function(){showProperties();}, 300);
+                        endConnecting();
                     });
 
                 }).catch(error => {
                     console.log("getCharacteristics error");
                     console.log(error);
+                    endConnecting();
                 });
 
 
             }).catch(error => {
                 console.log("getPrimaryService error");
                 console.log(error);
+                endConnecting();
             });
         });            
                 
     }).catch(error => {
         console.log(error);
+        endConnecting();
     });
 
 }
