@@ -328,8 +328,20 @@ class dateProperty extends Property{
 
         // get the value from the BLE char and place it in the field
         this.characteristic.readValue().then( value =>{
-          //console.log(`The  ${this.name} is: ${value.getUint32(0, true)}`);
-          this.inputField.value = dataToText(value);
+           
+            // Check for a valid date format...
+            let digits = dataToText(value).split("-", 3).concat(['','']);
+
+            // if any of the digits are not a digit, default to current date
+            if(isNaN(digits[0]) || isNaN(digits[1]) || isNaN(digits[2])){
+                let currTime = new Date();                
+                digits = [currTime.getFullYear(), currTime.getMonth(), currTime.getDay()];
+            } 
+            if(digits[0].length == 2){ // short year value?
+                digits[0] = '20'+digits[0];
+            }
+            // set value - pad month and day numbers with zeros
+            this.inputField.value = [digits[0], ('0'+digits[1]).slice(-2), ('0'+digits[2]).slice(-2)].join('-');
 
         });
     }
@@ -365,12 +377,21 @@ class timeProperty extends Property{
     updateValue(){
         // get the value from the BLE char and place it in the field
         //console.log("Update Value Text");
-        //this.inputField = "2021-02-02";
+        //this.inputField = "HH:MM";
 
         // get the value from the BLE char and place it in the field
         this.characteristic.readValue().then( value =>{
-          //console.log(`The  ${this.name} is: ${value.getUint32(0, true)}`);
-          this.inputField.value = dataToText(value);
+
+            // Check for a valid time - split value, concat empty value to ensure 2 elements
+            let digits = dataToText(value).split(":", 2).concat('');
+
+            // if any of the time value are not a digit, default to current time
+            if(isNaN(digits[0]) || isNaN(digits[1])){
+                let currTime = new Date();                
+                digits = [currTime.getHours(), currTime.getMinutes()];
+            } 
+            // set value - pad numbers with zeros
+            this.inputField.value = [('0'+digits[0]).slice(-2), ('0'+digits[1]).slice(-2)].join(':');
 
         });
     }
