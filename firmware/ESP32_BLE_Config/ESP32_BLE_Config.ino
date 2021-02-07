@@ -24,7 +24,7 @@
 // https://www.uuidgenerator.net/
 
 #define kTargetServiceUUID  "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define kTargetServiceName  "OpenLog"
+#define kTargetServiceName  "ESP32 App"
 //--------------------------------------------------------------------------------------
 
 //--------------------------------------------------------------------------------------
@@ -75,8 +75,8 @@ const uint32_t sampleRateMax = 240;
 // Date prop - date is a string "YYYY-MM-DD"
 std::string strDate("2021-03-01");
 
-// Time prop - date is a string "HH:MM"
-std::string strTime("12:05");
+// Time prop - date is a string "HH:MM" - 
+std::string strTime("2:5"); // test value - will be parsed as 02:05
 
 // A float property - "offset value"
 float offsetValue = 4.124;
