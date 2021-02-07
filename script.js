@@ -539,6 +539,12 @@ function startConnecting(){ document.body.style.cursor = "wait";}
 function endConnecting(){ document.body.style.cursor = "default";}
 function connectToBLEService() {
 
+    // is ble supported?
+    if(typeof navigator.bluetooth == "undefined" ){
+        alert(["Bluetooth is not available in this browser.", "Only Chrome-based browers support Bluetooth"]);
+        return;
+    }
+
     let filters = [];
     // KDB - for esp32 ...
     // Filtering on the name on it's own will find the device, but not the device with the
@@ -548,7 +554,6 @@ function connectToBLEService() {
     filters.push({services:[kTargetServiceUUID]});
     let options = {};
     options.filters = filters;
-
     return navigator.bluetooth.requestDevice(options).then(device => {
         
         if(device.name)
@@ -580,21 +585,26 @@ function connectToBLEService() {
                     });
 
                 }).catch(error => {
-                    console.log("getCharacteristics error");
-                    console.log(error);
+                    console.log("getCharacteristics Error: " + error);
+                    alert("Error communicating with device. Disconnecting.");
                     endConnecting();
                 });
 
 
             }).catch(error => {
-                console.log("getPrimaryService error");
-                console.log(error);
+                console.log("getPrimaryService Error:" + error);
+                alert("Unable to connect with the BLE settings service. Disconnecting.");
                 endConnecting();
             });
-        });            
+        }).catch(error => {
+            console.log(error);
+            alert("Unable to connect with the BLE settings service. Disconnecting.");
+            endConnecting();
+        });
                 
     }).catch(error => {
         console.log(error);
+        alert("Unable to access with browsers BLE system. Disconnecting.");
         endConnecting();
     });
 
@@ -604,7 +614,7 @@ function connectToBLEService() {
 //--------------------------------------------------------------------------------------
 
 // The connect button 
-let connectBtn = document.getElementById("connect")
+const connectBtn = document.getElementById("connect");
 connectBtn.addEventListener("click", () => {
     if(theGattServer && theGattServer.connected){
         disconnectBLEService();
