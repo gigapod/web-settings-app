@@ -166,7 +166,7 @@ class rangeProperty extends Property{
         });
 
     }
-    
+    // TODO ^^^^ add error handling ...
     //------------------------
    	generateElement(){
 
@@ -265,6 +265,10 @@ class textProperty extends Property{
 // intProperty Object
 class intProperty extends Property{
 
+    init(){
+        this.timer=-1;
+        super.init();
+    }
    	generateElement(){
 
    		this.div = document.createElement("div");
@@ -292,11 +296,18 @@ class intProperty extends Property{
     }
 
     saveValue(){
-        // Get the value from the input field and save it to the characteristic
-        let buff = new ArrayBuffer(4);
-        let newValue = new Int32Array(buff);
-        newValue[0] = this.inputField.value;
-        this.characteristic.writeValue(buff);
+        // The arrows in the number field can fire off rapid events, which
+        // can hammer the update, so buffer using a timer
+
+        window.clearTimeout(this.timer);
+        this.timer = window.setTimeout(()=>{
+            // Get the value from the input field and save it to the characteristic
+            let buff = new ArrayBuffer(4);
+            let newValue = new Int32Array(buff);
+            newValue[0] = this.inputField.value;
+            this.characteristic.writeValue(buff);
+        }, 1500);
+        
     }
 }
 //-------------------------------------------------------------
@@ -424,7 +435,10 @@ class timeProperty extends Property{
     }
 }
 class floatProperty extends Property{
-
+    init(){
+        this.timer=-1;
+        super.init();
+    }
     generateElement(){
 
       this.div = document.createElement("div");
@@ -453,11 +467,18 @@ class floatProperty extends Property{
     }
 
     saveValue(){
-        // Get the value from the input field and save it to the characteristic
-        let buff = new ArrayBuffer(4);
-        let newValue = new Float32Array(buff);
-        newValue[0] = this.inputField.value;
-        this.characteristic.writeValue(buff);
+        // The arrows in the number field can fire off rapid events, which
+        // can hammer the update, so buffer using a timer
+
+        window.clearTimeout(this.timer);
+        this.timer = window.setTimeout(()=>{
+            // Get the value from the input field and save it to the characteristic
+            let buff = new ArrayBuffer(4);
+            let newValue = new Float32Array(buff);
+            newValue[0] = this.inputField.value;
+            this.characteristic.writeValue(buff);
+        }, 1500);
+        
     }
 }
 // --------------------
