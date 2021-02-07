@@ -520,8 +520,7 @@ function bleConnected(gattServer){
     }
     theGattServer = gattServer;
 
-    // update button label
-    document.getElementById("connect").innerHTML ="Disconnect From " + kTargetServiceName;
+
     
 }
 // disconnect event handler.
@@ -535,8 +534,30 @@ function onDisconnected(){
     theGattServer=null;
 
 }
-function startConnecting(){ document.body.style.cursor = "wait";}
-function endConnecting(){ document.body.style.cursor = "default";}
+function startConnecting(){ 
+    document.body.style.cursor = "wait";
+    // update button label
+    let button= document.getElementById("connect");
+    button.innerHTML ="Connecting to " + kTargetServiceName + '...';
+    button.style.fontStyle='italic';
+    button.disabled=true;
+    button.style.cursor = "not-allowed";       
+
+}
+function endConnecting(success){ 
+
+    document.body.style.cursor = "default";
+    let button= document.getElementById("connect");
+    button.style.fontStyle ='';
+    button.disabled=false;
+    button.style.cursor = "auto";   
+    if(success){
+        // update button label
+        document.getElementById("connect").innerHTML ="Disconnect From " + kTargetServiceName;
+    }else{
+        onDisconnected();
+    }
+}
 function connectToBLEService() {
 
     // is ble supported?
@@ -554,12 +575,13 @@ function connectToBLEService() {
     filters.push({services:[kTargetServiceUUID]});
     let options = {};
     options.filters = filters;
+    startConnecting();
     return navigator.bluetooth.requestDevice(options).then(device => {
         
         if(device.name)
             setDeviceName(device.name);
 
-        startConnecting();
+
         device.addEventListener('gattserverdisconnected', onDisconnected);
 
         return device.gatt.connect().then(gattServer => {
@@ -581,31 +603,31 @@ function connectToBLEService() {
                     Promise.all(promises).then((results)=>{
                         // still found the UX isn't all there yet ... wait a cycle or 2
                         setTimeout(function(){showProperties();}, 300);
-                        endConnecting();
+                        endConnecting(true);
                     });
 
                 }).catch(error => {
                     console.log("getCharacteristics Error: " + error);
                     alert("Error communicating with device. Disconnecting.");
-                    endConnecting();
+                    endConnecting(false);
                 });
 
 
             }).catch(error => {
                 console.log("getPrimaryService Error:" + error);
                 alert("Unable to connect with the BLE settings service. Disconnecting.");
-                endConnecting();
+                endConnecting(false);
             });
         }).catch(error => {
             console.log(error);
             alert("Unable to connect with the BLE settings service. Disconnecting.");
-            endConnecting();
+            endConnecting(false);
         });
                 
     }).catch(error => {
         console.log(error);
         alert("Unable to access with browsers BLE system. Disconnecting.");
-        endConnecting();
+        endConnecting(false);
     });
 
 }
