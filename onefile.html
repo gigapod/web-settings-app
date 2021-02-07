@@ -3,9 +3,8 @@
 <head>
 	<meta charset="UTF-8">
   	<title>SparkFun BLE Settings App</title>
-
- 	<style type="text/css">
- 		* {
+<style type="text/css">
+	* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -27,7 +26,7 @@ button {
 
 .container {
   margin: 40px 0;
-  width: 400px;
+  width: 450px;
   /*height: 600px;*/
   padding: 10px 25px;
   background: #0a0e31;
@@ -228,7 +227,7 @@ button {
   background: #a0a0a0;
   font-weight: bold;
   font-size: 1.1rem;
-  width:40%;
+  width:45%;
   text-align: left;
 }
 
@@ -256,12 +255,71 @@ button {
   background: #a0a0a0;
   font-weight: bold;
   font-size: 1.1rem;
-  width:40%;
+  width:45%;
   text-align: right;
 }
 
 .settings .number-prop input + label {
   user-select: none;
+}
+
+.settings .date-prop {
+  position: relative;
+  width: 100%;
+  height: calc(65px - 10px);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  padding: 10px 25px;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.settings .date-prop input {
+  position: absolute;
+  right: 12px;
+  background: #a0a0a0;
+  font-weight: bold;
+  font-size: 1.2rem;
+  width:45%;
+  text-align: left;
+}
+
+.settings .date-prop input + label {
+  user-select: none;
+}
+
+
+.settings .time-prop {
+  position: relative;
+  width: 100%;
+  height: calc(65px - 10px);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  padding: 10px 25px;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.settings .time-prop input {
+  position: absolute;
+  right: 12px;
+  background: #a0a0a0;
+  font-weight: bold;
+  font-size: 1.2rem;
+  width:45%;
+  text-align: left;
+}
+
+.settings .time-prop input + label {
+  user-select: none;
+}
+
+input[type=number]:invalid{
+  background-color: #FFAAAA;
 }
 .btn.generate {
   user-select: none;
@@ -303,22 +361,23 @@ a:hover {
   color: #222;
 }
 
+
 </style>
 
 </head>
 <body>
 
 <div class="container">
-	<h2 class="title" id='settings-title'>OpenLog Settings</h2>
-	<button class="btn generate" id="connect">Connect to OpenLog</button>
+	<h2 class="title" id='settings-title'>SparkFun Settings</h2>
+	<button class="btn generate" id="connect">Connect to Device</button>
 	<div class="settings" id="settings-container">
-		<h2 class="title">Settings</h2>		
+		<h2 class="title">Settings</h2>	
 	</div>
 </div>
 
 <!-- javascript -->
 <script type="text/javascript">
-	
+
 // App to connect to an embedded device (like SparkFun OpenLog) and manage settings via BLE
 
 
@@ -347,6 +406,9 @@ const kSFEPropTypeBool      = 0x1;
 const kSFEPropTypeInt       = 0x2;
 const kSFEPropTypeRange     = 0x3;
 const kSFEPropTypeText      = 0x4;
+const kSFEPropTypeDate      = 0x5;
+const kSFEPropTypeTime      = 0x6;
+const kSFEPropTypeFloat     = 0x6;
 
 
 var bIsConnected = false;
@@ -394,8 +456,12 @@ class Property{
 
                 // We have the name - call method to generate UX and complete setup
                 this.generateElement();
-// TODO ERROR HANDLING
+
+            }).catch(error => {
+                console.log(error);
             });
+        }).catch(error => {
+                console.log(error);
         });
 
     }
@@ -576,24 +642,15 @@ class textProperty extends Property{
 
 //-------------------------------------------------------------
 // intProperty Object
-
-// Function to limit text entry to numbers
-   
-function isNumberKey(evt){
-    let charCode = (evt.which) ? evt.which : evt.keyCode
-    if (charCode > 31 && (charCode < 48 || charCode > 57))
-        return false;
-    return true;
-}
-	
 class intProperty extends Property{
 
    	generateElement(){
 
    		this.div = document.createElement("div");
+
    		this.div.innerHTML = `
 	   		<div class="number-prop">
-				<input type="text" id="`+ this.ID + `" onkeypress="return isNumberKey(event)"/>
+        <input type="number" id="`+ this.ID + `" step="1" />
 				<label for="` + this.ID + `">` + this.name + `</label>
 			</div>
    		`;
@@ -621,6 +678,167 @@ class intProperty extends Property{
         this.characteristic.writeValue(buff);
     }
 }
+//-------------------------------------------------------------
+// dateProperty Object
+class dateProperty extends Property{
+
+    init(){
+        this.timer=-1;
+        super.init();
+    }
+    generateElement(){
+
+        this.div = document.createElement("div");
+        this.div.innerHTML = `
+            <div class="date-prop">
+                <input type="date" id="`+ this.ID + `" />
+                <label for="` + this.ID + `">` + this.name + `</label>
+            </div>
+        `;
+        document.getElementById(targetID).appendChild(this.div);
+
+        this.inputField = this.div.querySelector('input');
+        this.inputField.addEventListener("change", () => {
+            this.saveValue();
+        });
+        this.updateValue();             
+    }
+
+    updateValue(){
+        // get the value from the BLE char and place it in the field
+        //console.log("Update Value Text");
+        //this.inputField = "2021-02-02";
+
+        // get the value from the BLE char and place it in the field
+        this.characteristic.readValue().then( value =>{
+           
+            // Check for a valid date format...
+            let digits = dataToText(value).split("-", 3).concat(['','']);
+
+            // if any of the digits are not a digit, default to current date
+            if(isNaN(digits[0]) || isNaN(digits[1]) || isNaN(digits[2])){
+                let currTime = new Date();                
+                digits = [currTime.getFullYear(), currTime.getMonth(), currTime.getDay()];
+            } 
+            if(digits[0].length == 2){ // short year value?
+                digits[0] = '20'+digits[0];
+            }
+            // set value - pad month and day numbers with zeros
+            this.inputField.value = [digits[0], ('0'+digits[1]).slice(-2), ('0'+digits[2]).slice(-2)].join('-');
+
+        });
+    }
+
+    saveValue(){
+        // Typing in the timefield is slow, so you can hammer the BLE
+        // char with multiple sets as the date changes. Buffer this using a timer
+        window.clearTimeout(this.timer);
+        this.timer = window.setTimeout(()=>{
+            // Get the value from the input field and save it to the characteristic
+            this.characteristic.writeValue(textToData(this.inputField.value));
+        }, 1500);
+
+    }
+}
+
+//-------------------------------------------------------------
+// timeProperty Object
+class timeProperty extends Property{
+
+    init(){
+        this.timer=-1;
+        super.init();
+    }
+    generateElement(){
+
+        this.div = document.createElement("div");
+        this.div.innerHTML = `
+            <div class="time-prop">
+                <input type="time" id="`+ this.ID + `" />
+                <label for="` + this.ID + `">` + this.name + `</label>
+            </div>
+        `;
+        document.getElementById(targetID).appendChild(this.div);
+
+        this.inputField = this.div.querySelector('input');
+        this.inputField.addEventListener("change", () => {
+            this.saveValue();
+        });
+        this.updateValue();             
+    }
+
+    updateValue(){
+        // get the value from the BLE char and place it in the field
+        //console.log("Update Value Text");
+        //this.inputField = "HH:MM";
+
+        // get the value from the BLE char and place it in the field
+        this.characteristic.readValue().then( value =>{
+
+            // Check for a valid time - split value, concat empty value to ensure 2 elements
+            let digits = dataToText(value).split(":", 2).concat('');
+
+            // if any of the time value are not a digit, default to current time
+            if(isNaN(digits[0]) || isNaN(digits[1])){
+                let currTime = new Date();                
+                digits = [currTime.getHours(), currTime.getMinutes()];
+            } 
+            // set value - pad numbers with zeros
+            this.inputField.value = [('0'+digits[0]).slice(-2), ('0'+digits[1]).slice(-2)].join(':');
+
+        });
+    }
+
+    saveValue(){
+        // Typing in the timefield is slow, so you can hammer the BLE
+        // char with multiple sets as the date changes. Buffer this using a timer
+
+        window.clearTimeout(this.timer);
+        this.timer = window.setTimeout(()=>{
+            // Get the value from the input field and save it to the characteristic
+            this.characteristic.writeValue(textToData(this.inputField.value));
+        }, 1500);
+
+
+    }
+}
+class floatProperty extends Property{
+
+    generateElement(){
+
+      this.div = document.createElement("div");
+      this.div.innerHTML = `
+        <div class="number-prop">
+        <input type="number" id="`+ this.ID + `" step=".001" />
+        <label for="` + this.ID + `">` + this.name + `</label>
+      </div>
+      `;
+      document.getElementById(targetID).appendChild(this.div);
+
+      this.inputField = this.div.querySelector('input');
+      this.inputField.addEventListener("change", () => {
+        this.saveValue();
+      });
+      this.updateValue();         
+    }
+
+    updateValue(){
+        // get the value from the BLE char and place it in the field
+        this.characteristic.readValue().then( value =>{
+            // We are limiting floats to three decimal places.
+            // Round out the floating number noise
+            this.inputField.value = Math.round((value.getFloat32(0,true) + Number.EPSILON)*1000)/1000;
+        });
+    }
+
+    saveValue(){
+        // Get the value from the input field and save it to the characteristic
+        let buff = new ArrayBuffer(4);
+        let newValue = new Float32Array(buff);
+        newValue[0] = this.inputField.value;
+        this.characteristic.writeValue(buff);
+    }
+}
 // --------------------
 // Delete all properties
 function deleteProperties(){
@@ -642,7 +860,8 @@ function showProperties(){
 // Add a property to the system based on a BLE Characteristic
 //
 // Our property object defs = KEY: The order is same as type code index above. 
-const propFactory = [boolProperty, intProperty, rangeProperty, textProperty];
+const propFactory = [boolProperty, intProperty, rangeProperty, textProperty, dateProperty, 
+                     timeProperty, floatProperty];
 
 // use a promise to encapsulate the async BLE calls
 function addPropertyToSystem(bleCharacteristic){
@@ -658,7 +877,7 @@ function addPropertyToSystem(bleCharacteristic){
 
                 let type = value.getUint8(0,0);
 
-                if(type < kSFEPropTypeBool || type > kSFEPropTypeText ){
+                if(type < kSFEPropTypeBool || type > propFactory.length ){
                     console.log("Invalid Type value: " + type);
                     resolve(1);
                 }
@@ -702,8 +921,7 @@ function bleConnected(gattServer){
     }
     theGattServer = gattServer;
 
-    // update button label
-    document.getElementById("connect").innerHTML ="Disconnect From " + kTargetServiceName;
+
     
 }
 // disconnect event handler.
@@ -717,7 +935,37 @@ function onDisconnected(){
     theGattServer=null;
 
 }
+function startConnecting(){ 
+    document.body.style.cursor = "wait";
+    // update button label
+    let button= document.getElementById("connect");
+    button.innerHTML ="Connecting to " + kTargetServiceName + '...';
+    button.style.fontStyle='italic';
+    button.disabled=true;
+    button.style.cursor = "not-allowed";       
+
+}
+function endConnecting(success){ 
+
+    document.body.style.cursor = "default";
+    let button= document.getElementById("connect");
+    button.style.fontStyle ='';
+    button.disabled=false;
+    button.style.cursor = "auto";   
+    if(success){
+        // update button label
+        document.getElementById("connect").innerHTML ="Disconnect From " + kTargetServiceName;
+    }else{
+        onDisconnected();
+    }
+}
 function connectToBLEService() {
+
+    // is ble supported?
+    if(typeof navigator.bluetooth == "undefined" ){
+        alert(["Bluetooth is not available in this browser.", "Only Chrome-based browers support Bluetooth"]);
+        return;
+    }
 
     let filters = [];
     // KDB - for esp32 ...
@@ -728,11 +976,12 @@ function connectToBLEService() {
     filters.push({services:[kTargetServiceUUID]});
     let options = {};
     options.filters = filters;
-
+    startConnecting();
     return navigator.bluetooth.requestDevice(options).then(device => {
         
         if(device.name)
             setDeviceName(device.name);
+
 
         device.addEventListener('gattserverdisconnected', onDisconnected);
 
@@ -755,22 +1004,31 @@ function connectToBLEService() {
                     Promise.all(promises).then((results)=>{
                         // still found the UX isn't all there yet ... wait a cycle or 2
                         setTimeout(function(){showProperties();}, 300);
+                        endConnecting(true);
                     });
 
                 }).catch(error => {
-                    console.log("getCharacteristics error");
-                    console.log(error);
+                    console.log("getCharacteristics Error: " + error);
+                    alert("Error communicating with device. Disconnecting.");
+                    endConnecting(false);
                 });
 
 
             }).catch(error => {
-                console.log("getPrimaryService error");
-                console.log(error);
+                console.log("getPrimaryService Error:" + error);
+                alert("Unable to connect with the BLE settings service. Disconnecting.");
+                endConnecting(false);
             });
-        });            
+        }).catch(error => {
+            console.log(error);
+            alert("Unable to connect with the BLE settings service. Disconnecting.");
+            endConnecting(false);
+        });
                 
     }).catch(error => {
         console.log(error);
+        alert("Unable to access with browsers BLE system. Disconnecting.");
+        endConnecting(false);
     });
 
 }
@@ -779,7 +1037,7 @@ function connectToBLEService() {
 //--------------------------------------------------------------------------------------
 
 // The connect button 
-let connectBtn = document.getElementById("connect")
+const connectBtn = document.getElementById("connect");
 connectBtn.addEventListener("click", () => {
     if(theGattServer && theGattServer.connected){
         disconnectBLEService();
@@ -792,7 +1050,6 @@ window.onload = function(){
     setDeviceName(kTargetServiceName);
 
 }
-
 	
 </script>
 
