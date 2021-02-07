@@ -303,6 +303,10 @@ class intProperty extends Property{
 // dateProperty Object
 class dateProperty extends Property{
 
+    init(){
+        this.timer=-1;
+        super.init();
+    }
     generateElement(){
 
         this.div = document.createElement("div");
@@ -347,8 +351,14 @@ class dateProperty extends Property{
     }
 
     saveValue(){
-        // Get the value from the input field and save it to the characteristic
-        this.characteristic.writeValue(textToData(this.inputField.value));
+        // Typing in the timefield is slow, so you can hammer the BLE
+        // char with multiple sets as the date changes. Buffer this using a timer
+        window.clearTimeout(this.timer);
+        this.timer = window.setTimeout(()=>{
+            // Get the value from the input field and save it to the characteristic
+            this.characteristic.writeValue(textToData(this.inputField.value));
+        }, 1500);
+
     }
 }
 
@@ -356,6 +366,10 @@ class dateProperty extends Property{
 // timeProperty Object
 class timeProperty extends Property{
 
+    init(){
+        this.timer=-1;
+        super.init();
+    }
     generateElement(){
 
         this.div = document.createElement("div");
@@ -397,8 +411,16 @@ class timeProperty extends Property{
     }
 
     saveValue(){
-        // Get the value from the input field and save it to the characteristic
-        this.characteristic.writeValue(textToData(this.inputField.value));
+        // Typing in the timefield is slow, so you can hammer the BLE
+        // char with multiple sets as the date changes. Buffer this using a timer
+
+        window.clearTimeout(this.timer);
+        this.timer = window.setTimeout(()=>{
+            // Get the value from the input field and save it to the characteristic
+            this.characteristic.writeValue(textToData(this.inputField.value));
+        }, 1500);
+
+
     }
 }
 class floatProperty extends Property{
