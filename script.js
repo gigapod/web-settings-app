@@ -46,8 +46,9 @@ const targetID = 'settings-container';
 
 
 const currentProperties=[];
-
+let deviceName=kTargetServiceName;
 function setDeviceName(name){
+    deviceName = name;
     document.getElementById("settings-title").innerHTML= name+ " Settings";
 }
 
@@ -148,6 +149,7 @@ const range_background = "rgba(255, 255, 255, 0.214)";
 
 class rangeProperty extends Property{
 
+    // TODO better error handling here
     init(){
         // Get Min and Max of Range
         this.characteristic.getDescriptor(kBLEDescSFEPropRangeMinUUID).then(desc =>{
@@ -160,13 +162,24 @@ class rangeProperty extends Property{
 
                         // Call super - finish setup
                         super.init();
+                    }).catch(error => {
+                        console.log("Get range property Max failed" + error);
+                        this.max = 100;
                     });
+                }).catch(error => {
+                    console.log("Get range property Max failed" + error);;
+                    this.max=100;
                 });
-            });
+        }).catch(error => {
+            console.log("Get range property Min failed" + error);
+            this.min=0;
         });
 
-    }
-    // TODO ^^^^ add error handling ...
+    }).catch(error => {
+        console.log("Get range property Min failed" + error);
+        this.min=0;
+    });
+}
     //------------------------
    	generateElement(){
 
@@ -569,7 +582,7 @@ function bleConnected(gattServer){
 // disconnect event handler.
 function onDisconnected(){
 
-    document.getElementById("connect").innerHTML ="Connect To " + kTargetServiceName;
+    document.getElementById("connect").innerHTML ="Connect To " + deviceName;
 
     // Delete our properties....
     deleteProperties();
@@ -581,7 +594,7 @@ function startConnecting(){
     document.body.style.cursor = "wait";
     // update button label
     let button= document.getElementById("connect");
-    button.innerHTML ="Connecting to " + kTargetServiceName + '...';
+    button.innerHTML ="Connecting to " + deviceName + '...';
     button.style.fontStyle='italic';
     button.disabled=true;
     button.style.cursor = "not-allowed";       
@@ -596,7 +609,7 @@ function endConnecting(success){
     button.style.cursor = "auto";   
     if(success){
         // update button label
-        document.getElementById("connect").innerHTML ="Disconnect From " + kTargetServiceName;
+        document.getElementById("connect").innerHTML ="Disconnect From " + deviceName;
     }else{
         onDisconnected();
     }
