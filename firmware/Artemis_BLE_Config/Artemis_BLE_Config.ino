@@ -36,7 +36,7 @@ const uint8_t kSFEPropTypeFloat      = 0x7;
 #define kCharacteristicSampleUUID   "beb5483e-36e1-4688-b7f5-ea07311b260b"
 #define kCharacteristicDateUUID     "beb5483e-36e1-4688-b7f5-ea07311b260c"
 #define kCharacteristicTimeUUID     "beb5483e-36e1-4688-b7f5-ea07311b260d"
-#define kCharacteristicOffsetUUID     "beb5483e-36e1-4688-b7f5-ea07311b260e"
+#define kCharacteristicOffsetUUID   "beb5483e-36e1-4688-b7f5-ea07311b260e"
 
 // helper
 #define kMessageMax 64
