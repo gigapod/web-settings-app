@@ -237,6 +237,7 @@ void setupDateCharacteristic(BLEService *pService){
 
     sf_bleprop_date(pCharDate, "Start Date");
 
+    sf_bleprop_group(pCharDate, "Event Details");    
 }
 //---------------------------------------------------------------------------------
 // Time Characterisitic 

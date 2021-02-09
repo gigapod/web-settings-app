@@ -72,6 +72,22 @@ class Property{
     
     init(){
         return new Promise( (resolve) => {
+
+            // check for group title
+            let descgrp = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEGroupTitleUUID);
+            if(descgrp){
+                descgrp.readValue().then(value =>{
+                    // decode name, set in instance data
+                    let grpName= dataToText(value);
+                    if(grpName.length > 2){
+                        let div = document.createElement("div");
+
+                        div.innerHTML = ` <h2 class="title">`+ grpName + `</h2>`;  
+                        document.getElementById(targetID).appendChild(div);
+                    }
+                });
+            }
+
             // get the name of this prop
             let descName = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescCharNameUUID);
             
