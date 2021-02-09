@@ -24,7 +24,7 @@
 #define kCharacteristicSampleUUID   "beb5483e-36e1-4688-b7f5-ea07311b260b"
 #define kCharacteristicDateUUID     "beb5483e-36e1-4688-b7f5-ea07311b260c"
 #define kCharacteristicTimeUUID     "beb5483e-36e1-4688-b7f5-ea07311b260d"
-#define kCharacteristicOffsetUUID     "beb5483e-36e1-4688-b7f5-ea07311b260e"
+#define kCharacteristicOffsetUUID   "beb5483e-36e1-4688-b7f5-ea07311b260e"
 
 // helper
 #define kMessageMax 64
@@ -38,8 +38,7 @@ BLEService bleService(kTargetServiceUUID);
 // First Characteristic - "Enabled" - bool - is the system enabled 
 boolean bIsEnabled = true;
 BLEBooleanCharacteristic bleCharEnabled(kCharacteristicEnabledUUID, BLERead | BLENotify | BLEWrite);
-//BLEDescriptor descEnabledName(kBLEDescCharNameUUID, "Device Enabled");
-//BLEDescriptor descEnabledType(kBLEDescSFEPropTypeUUID, &kSFEPropTypeBool, sizeof(kSFEPropTypeBool) );
+
 // Second Characteristic - Baud Rate - int - the baud rate of the syste
 int32_t baudRate = 115200;
 BLEIntCharacteristic bleCharBaudRate(kCharacteristicBaudUUID, BLERead | BLENotify | BLEWrite);
