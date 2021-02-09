@@ -31,6 +31,7 @@
 #define kBLEDescSFEPropTypeUUID         "A101"
 #define kBLEDescSFEPropRangeMinUUID     "A110"
 #define kBLEDescSFEPropRangeMaxUUID     "A111"
+#define kBLEDescSFEGroupTitleUUID       "A112"
 
 
 // Property type codes - sent as a value of the char descriptor 
@@ -114,6 +115,11 @@ void sf_bleprop_range(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName,
     _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropRangeMinUUID, ( uint8_t*)&vMin, sizeof(vMin));    
     _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropRangeMaxUUID, ( uint8_t*)&vMax, sizeof(vMax));        
 
+}
+
+void sf_bleprop_group(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strGroup){
+
+    _sf_bleprop_add_desc(bleChar, kBLEDescSFEGroupTitleUUID, ( uint8_t*)strGroup, strlen(strGroup));        
 }
 
 
