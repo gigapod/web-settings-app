@@ -65,25 +65,30 @@ class Property{
       	this.characteristic = bleChar;
     	this.ID = "property-" + namecnt++;  // unique id for the DOM
         this.div = null;
+        this.timer=-1;
     }
 
     init(){
+        return new Promise( (resolve) => {
+            // get the name of this prop
+            this.characteristic.getDescriptor(kBLEDescCharNameUUID).then(desc =>{
 
-        // get the name of this prop
-        this.characteristic.getDescriptor(kBLEDescCharNameUUID).then(desc =>{
+                desc.readValue().then(value =>{
+                    // decode name, set in instance data
+                    this.name = dataToText(value);
 
-            desc.readValue().then(value =>{
-                // decode name, set in instance data
-                this.name = dataToText(value);
+                    // We have the name - call method to generate UX and complete setup
+                    this.generateElement();
+                    resolve(0);
 
-                // We have the name - call method to generate UX and complete setup
-                this.generateElement();
-
+                }).catch(error => {
+                    console.log(error);
+                    resolve(-1);
+                });
             }).catch(error => {
                 console.log(error);
+                resolve(-2);
             });
-        }).catch(error => {
-                console.log(error);
         });
 
     }
@@ -151,33 +156,42 @@ class rangeProperty extends Property{
 
     // TODO better error handling here
     init(){
-        // Get Min and Max of Range
-        this.characteristic.getDescriptor(kBLEDescSFEPropRangeMinUUID).then(desc =>{
-            desc.readValue().then(value =>{
-                this.min = value.getInt32(0,true);
+        return new Promise( (resolve) => {
+            // Get Min and Max of Range
+            this.characteristic.getDescriptor(kBLEDescSFEPropRangeMinUUID).then(desc =>{
+                desc.readValue().then(value =>{
+                    this.min = value.getInt32(0,true);
 
-                this.characteristic.getDescriptor(kBLEDescSFEPropRangeMaxUUID).then(desc =>{
-                    desc.readValue().then(value =>{
-                        this.max = value.getInt32(0, true);
+                    this.characteristic.getDescriptor(kBLEDescSFEPropRangeMaxUUID).then(desc =>{
+                        desc.readValue().then(value =>{
+                            this.max = value.getInt32(0, true);
 
-                        // Call super - finish setup
-                        super.init();
+                            // Call super - finish setup
+                            super.init().then(results =>{
+                                resolve(0);
+                            });
+
+                        }).catch(error => {
+                            console.log("Get range property Max failed" + error);
+                            this.max = 100;
+                            resolve(-1);
+                        });
                     }).catch(error => {
-                        console.log("Get range property Max failed" + error);
-                        this.max = 100;
+                        console.log("Get range property Max failed" + error);;
+                        this.max=100;
+                        resolve(-1);
                     });
-                }).catch(error => {
-                    console.log("Get range property Max failed" + error);;
-                    this.max=100;
-                });
+            }).catch(error => {
+                console.log("Get range property Min failed" + error);
+                this.min=0;
+                resolve(-1);
+            });
+
         }).catch(error => {
             console.log("Get range property Min failed" + error);
             this.min=0;
+            resolve(-1);
         });
-
-    }).catch(error => {
-        console.log("Get range property Min failed" + error);
-        this.min=0;
     });
 }
     //------------------------
@@ -278,10 +292,7 @@ class textProperty extends Property{
 // intProperty Object
 class intProperty extends Property{
 
-    init(){
-        this.timer=-1;
-        super.init();
-    }
+    
    	generateElement(){
 
    		this.div = document.createElement("div");
@@ -327,10 +338,7 @@ class intProperty extends Property{
 // dateProperty Object
 class dateProperty extends Property{
 
-    init(){
-        this.timer=-1;
-        super.init();
-    }
+    
     generateElement(){
 
         this.div = document.createElement("div");
@@ -390,10 +398,7 @@ class dateProperty extends Property{
 // timeProperty Object
 class timeProperty extends Property{
 
-    init(){
-        this.timer=-1;
-        super.init();
-    }
+    
     generateElement(){
 
         this.div = document.createElement("div");
@@ -448,10 +453,7 @@ class timeProperty extends Property{
     }
 }
 class floatProperty extends Property{
-    init(){
-        this.timer=-1;
-        super.init();
-    }
+    
     generateElement(){
 
       this.div = document.createElement("div");
@@ -511,6 +513,30 @@ function showProperties(){
         document.getElementById(targetID).style.display="flex"; 
     }
 }
+
+function compairPropOrder(a, b){
+
+    if ( a.order < b.order ){
+        return -1;
+    }
+    if ( a.order > b.order ){
+        return 1;
+    }
+    return 0;
+}
+
+async function renderProperties(){
+
+    // first sort our props so they display as desired
+    currentProperties.sort(compairPropOrder);
+
+    // build the UX for each property
+    for(const aProp of currentProperties){
+        let result = await aProp.init();
+    }
+    // still found the UX isn't all there yet ... wait a cycle or 2
+    setTimeout(function(){showProperties();}, 300);
+}
 //--------------------------------------------------------------------------------------
 // Add a property to the system based on a BLE Characteristic
 //
@@ -530,7 +556,9 @@ function addPropertyToSystem(bleCharacteristic){
             // Get the value of the type descriptor
             desc.readValue().then(value =>{
 
-                let type = value.getUint8(0,0);
+                let attributes = value.getUint32(0,true);
+                let order = attributes >> 8 & 0xFF;
+                let type = attributes & 0xFF;
 
                 if(type < kSFEPropTypeBool || type > propFactory.length ){
                     console.log("Invalid Type value: " + type);
@@ -539,10 +567,9 @@ function addPropertyToSystem(bleCharacteristic){
                 // build prop object - notice index into array of prop class defs 
                 let property = new propFactory[type-1](bleCharacteristic);   
 
+                property.order = order;
                 currentProperties.push(property);
 
-                // init our property
-                property.init();
                 resolve(0);
             });
         }).catch(error => {
@@ -657,8 +684,7 @@ function connectToBLEService() {
                         promises.push(addPropertyToSystem(aChar));
                     }
                     Promise.all(promises).then((results)=>{
-                        // still found the UX isn't all there yet ... wait a cycle or 2
-                        setTimeout(function(){showProperties();}, 300);
+                        renderProperties(); // build and display prop UX
                         endConnecting(true);
                     });
 

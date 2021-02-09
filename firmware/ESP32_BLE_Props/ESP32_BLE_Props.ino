@@ -310,10 +310,11 @@ void setup() {
     BLEService *pService = pServer->createService(BLEUUID(kTargetServiceUUID), 35, 1);
 
     //Setup characterstics
-    setupSampleRateCharacteristic(pService);
-    setupBaudCharacteristic(pService);
-    setupMessageCharacteristic(pService);
     setupEnabledCharacteristic(pService);
+    setupBaudCharacteristic(pService);
+    setupSampleRateCharacteristic(pService);
+    setupMessageCharacteristic(pService);
+
     setupDateCharacteristic(pService);
     setupTimeCharacteristic(pService); 
     setupOffsetCharacteristic(pService);   

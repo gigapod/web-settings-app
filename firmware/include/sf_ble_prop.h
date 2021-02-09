@@ -42,16 +42,11 @@
  uint8_t kSFEPropTypeTime      = 0x6;
  uint8_t kSFEPropTypeFloat     = 0x7;
 
-// TODO For esp32 and ArduinoBLE support
-//    - #ifdef on ESP23
-//          - proper include files
-//          - typedef for a characteristic - ArduinoBLE BLECharacterisrtic&, ESP32 BLECharacteristic *
-//              - use this as params
-//    - Create another function to create and add a descriptor objects to a char. 
-//          - This will have platform dependant sections.
-// 
-// TODO: Add a method for setting order here - based on when a thing is added
+//-------------------------------------------------------------------------
+static uint8_t sort_pos=0;  // if there are over 256 props, this system has bigger issues
 
+//-------------------------------------------------------------------------
+// ESP DEFS
 #ifdef ESP32
 
  // ESP hates const
@@ -61,8 +56,10 @@
 typedef BLECharacteristic* sfe_bleprop_charc_t;
 
 #else
-
+//-------------------------------------------------------------------------
+// ArduinoBLE DEFS
 // ArduinoBLE likes it's const
+
 #define sfe_ble_const const
 
 //-------------------------------------------------------------------------
@@ -89,7 +86,14 @@ void _sf_bleprop_core(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName,
 
     _sf_bleprop_add_desc(bleChar, kBLEDescCharNameUUID, (sfe_ble_const uint8_t*)strName, strlen(strName));
 
-    _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropTypeUUID, &propType, sizeof(propType));    
+    // Setup our attribute mask field. 32 bits for the future. Alloc b/c some BLE systems
+    // need it's own memory for value fields.
+    //
+    // Layout MSB to LSB
+    //  [TBD][TBD][ORDER][TYPE]
+    uint32_t * attr = new uint32_t;
+    *attr = (sort_pos++ << 8 ) | propType; // notice inc on order position
+    _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropTypeUUID, (sfe_ble_const uint8_t*)attr, sizeof(uint32_t));    
 
 }
 
