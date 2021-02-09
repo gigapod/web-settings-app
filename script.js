@@ -21,6 +21,7 @@ const kBLEDescCharNameUUID = 0x2901;
 const kBLEDescSFEPropTypeUUID = 0xA101;
 const kBLEDescSFEPropRangeMinUUID = 0xA110;
 const kBLEDescSFEPropRangeMaxUUID = 0xA111;
+const kBLEDescSFEGroupTitleUUID = 0xA112;
 
 // Property type codes - sent as a value of the char descriptor 
 const kSFEPropTypeBool      = 0x1;
@@ -66,28 +67,29 @@ class Property{
     	this.ID = "property-" + namecnt++;  // unique id for the DOM
         this.div = null;
         this.timer=-1;
+        this.group=null;
     }
-
+    
     init(){
         return new Promise( (resolve) => {
             // get the name of this prop
-            this.characteristic.getDescriptor(kBLEDescCharNameUUID).then(desc =>{
+            let descName = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescCharNameUUID);
+            
+            if(descName == null){
+                console.log("Error getting property name value");
+                resolve(-1);
+            }
+            descName.readValue().then(value =>{
+                // decode name, set in instance data
+                this.name = dataToText(value);
 
-                desc.readValue().then(value =>{
-                    // decode name, set in instance data
-                    this.name = dataToText(value);
+                // We have the name - call method to generate UX and complete setup
+                this.generateElement();
+                resolve(0);
 
-                    // We have the name - call method to generate UX and complete setup
-                    this.generateElement();
-                    resolve(0);
-
-                }).catch(error => {
-                    console.log(error);
-                    resolve(-1);
-                });
             }).catch(error => {
                 console.log(error);
-                resolve(-2);
+                resolve(-1);
             });
         });
 
@@ -154,46 +156,43 @@ const range_background = "rgba(255, 255, 255, 0.214)";
 
 class rangeProperty extends Property{
 
-    // TODO better error handling here
     init(){
         return new Promise( (resolve) => {
             // Get Min and Max of Range
-            this.characteristic.getDescriptor(kBLEDescSFEPropRangeMinUUID).then(desc =>{
-                desc.readValue().then(value =>{
-                    this.min = value.getInt32(0,true);
-
-                    this.characteristic.getDescriptor(kBLEDescSFEPropRangeMaxUUID).then(desc =>{
-                        desc.readValue().then(value =>{
-                            this.max = value.getInt32(0, true);
-
-                            // Call super - finish setup
-                            super.init().then(results =>{
-                                resolve(0);
-                            });
-
-                        }).catch(error => {
-                            console.log("Get range property Max failed" + error);
-                            this.max = 100;
-                            resolve(-1);
-                        });
-                    }).catch(error => {
-                        console.log("Get range property Max failed" + error);;
-                        this.max=100;
-                        resolve(-1);
-                    });
+            let descMin = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEPropRangeMinUUID); 
+            if(descMin == null ){
+                console.log("No min value for range property. Setting to 0");
+                this.min = 0;
+            }                      
+            descMin.readValue().then(value =>{
+                this.min = value.getInt32(0,true);
             }).catch(error => {
                 console.log("Get range property Min failed" + error);
                 this.min=0;
+            });
+
+            let descMax = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEPropRangeMaxUUID); 
+            if(descMax == null ){
+                console.log("No max value for range property. Setting to 100");
+                this.max = 100;
+            }                      
+            descMax.readValue().then(value =>{
+                this.max = value.getInt32(0, true);
+
+                // TODO THIS NEEDS WORK
+                // Call super - finish setup
+                super.init().then(results =>{
+                    resolve(0);
+                });
+
+            }).catch(error => {
+                console.log("Get range property Max failed" + error);
+                this.max = 100;
                 resolve(-1);
             });
 
-        }).catch(error => {
-            console.log("Get range property Min failed" + error);
-            this.min=0;
-            resolve(-1);
         });
-    });
-}
+    }
     //------------------------
    	generateElement(){
 
@@ -534,8 +533,9 @@ async function renderProperties(){
     for(const aProp of currentProperties){
         let result = await aProp.init();
     }
+    showProperties();
     // still found the UX isn't all there yet ... wait a cycle or 2
-    setTimeout(function(){showProperties();}, 300);
+//    setTimeout(function(){showProperties();}, 100);
 }
 //--------------------------------------------------------------------------------------
 // Add a property to the system based on a BLE Characteristic
@@ -551,10 +551,16 @@ function addPropertyToSystem(bleCharacteristic){
     // with a lot of props ...
     return new Promise( (resolve) => {
         // Get the type descriptor
-        bleCharacteristic.getDescriptor(kBLEDescSFEPropTypeUUID).then(desc =>{
+        bleCharacteristic.getDescriptors().then(descs =>{
 
+            let descType = descs.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEPropTypeUUID);           
+
+            if(descType == null){
+                console.log("No type descriptor found.")
+                resolve(-1);
+            }
             // Get the value of the type descriptor
-            desc.readValue().then(value =>{
+            descType.readValue().then(value =>{
 
                 let attributes = value.getUint32(0,true);
                 let order = attributes >> 8 & 0xFF;
@@ -568,6 +574,7 @@ function addPropertyToSystem(bleCharacteristic){
                 let property = new propFactory[type-1](bleCharacteristic);   
 
                 property.order = order;
+                property.descriptors = descs;
                 currentProperties.push(property);
 
                 resolve(0);
