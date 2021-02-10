@@ -212,6 +212,7 @@ void blePeripheralDisconnectHandler(BLEDevice central) {
   Serial.println(central.address());
 }
 
+unsigned long ticks;
 void setup() {
 
     // start up serial port
@@ -245,11 +246,23 @@ void setup() {
     // broadcast BLE connection
     BLE.advertise();
 
+    ticks = millis();
     Serial.println(F("OLA BLE ready for connections!"));
 }
 
 void loop()
 {
+
+    if(millis() - ticks > 5000){
+        // Update the value of offset and set in BLE char
+        // Should trigger a notification on client
+        offsetValue += .5;
+        bleCharOffset.setValue(offsetValue);
+        Serial.print("Incrementing Offset to: "); Serial.println(offsetValue);
+        
+        ticks = millis();
+    }
+
     // everything is handled in callbacks.
     BLE.poll();
 
