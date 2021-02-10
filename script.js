@@ -17,7 +17,7 @@ console.clear();
 //--------------------------------------------------------------------------------------
 
 // BLE Codes for our service
-const kBLEDescCharNameUUID = 0x2901;
+const kBLEDescCharNameUUID = 0xA100;
 const kBLEDescSFEPropTypeUUID = 0xA101;
 const kBLEDescSFEPropRangeMinUUID = 0xA110;
 const kBLEDescSFEPropRangeMaxUUID = 0xA111;
@@ -72,7 +72,8 @@ class Property{
     
     init(){
 
-        this.enableNotifications();
+        // For now - enable notifications on all values ...
+       this.enableNotifications();
 
         return new Promise( (resolve) => {
 
@@ -124,9 +125,14 @@ class Property{
     }
     enableNotifications(){
         if(this.characteristic){
-            let target = this;
-            this.characteristic.addEventListener('characteristicvaluechanged', function(event){
-                target.updateValue(event.target.value);
+            this.characteristic.startNotifications().then( _ =>{
+                let target = this;
+                this.characteristic.addEventListener('characteristicvaluechanged', function(event){
+                    target.updateValue(event.target.value);
+                });
+            }).catch(error => {
+                //console.log("Notifications not available.");
+                // just eat this 
             });
         }
     }
