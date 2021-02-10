@@ -5,7 +5,7 @@
 // SETUP - Define the Target BLE Service
 //--------------------------------------------------------------------------------------
 const kTargetServiceUUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
-const kTargetServiceName = "OpenLog";
+const kTargetServiceName = "SparkFun Board";
 //--------------------------------------------------------------------------------------
 
 console.clear();
@@ -538,6 +538,7 @@ async function renderProperties(){
         let result = await aProp.init();
     }
     showProperties();
+    endConnecting(true);
     // still found the UX isn't all there yet ... wait a cycle or 2
 //    setTimeout(function(){showProperties();}, 100);
 }
@@ -697,7 +698,7 @@ function connectToBLEService() {
                     }
                     Promise.all(promises).then((results)=>{
                         renderProperties(); // build and display prop UX
-                        endConnecting(true);
+                        
                     });
 
                 }).catch(error => {
