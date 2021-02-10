@@ -153,25 +153,8 @@ void setupBLECharacteristics(BLEService& theService){
     bleCharEnabled.setValue(bIsEnabled);
     bleCharEnabled.setEventHandler(BLEWritten, enbabledUpdateCB);
 
-
-    // The BaudRate char
-    sf_bleprop_int(bleCharBaudRate, "Baud Rate"); // setup property descriptor    
-    theService.addCharacteristic(bleCharBaudRate);  
-    bleCharBaudRate.setValue(baudRate);
-    bleCharBaudRate.setEventHandler(BLEWritten, buadRateUpdateCB);
-
-
-    // The Message char
-    sf_bleprop_string(bleCharMessage, "Device Message"); // setup property descriptor        
-    theService.addCharacteristic(bleCharMessage);  
-    bleCharMessage.setValue(strMessage);
-    bleCharMessage.setEventHandler(BLEWritten, messageUpdateCB);    
-        
-    // The Sample Rate char
-    sf_bleprop_range(bleCharSampleRate, "Sample Rate (sec)", sampleRateMin, sampleRateMax); // setup property descriptor            
-    theService.addCharacteristic(bleCharSampleRate);
-    bleCharSampleRate.setValue(sampleRate);     
-    bleCharSampleRate.setEventHandler(BLEWritten, sampleRateUpdateCB);             
+    // Event details group
+    sf_bleprop_group(bleCharDate, "Event Details");    
 
     // The date char
     sf_bleprop_date(bleCharDate, "Start Date"); // setup property descriptor            
@@ -184,6 +167,30 @@ void setupBLECharacteristics(BLEService& theService){
     theService.addCharacteristic(bleCharTime);  
     bleCharTime.setValue(strTime);
     bleCharTime.setEventHandler(BLEWritten, timeUpdateCB);  
+
+    // Device Settings group
+    sf_bleprop_group(bleCharBaudRate, "Device Settings");  
+
+    // The BaudRate char
+    sf_bleprop_int(bleCharBaudRate, "Baud Rate"); // setup property descriptor    
+    theService.addCharacteristic(bleCharBaudRate);  
+    bleCharBaudRate.setValue(baudRate);
+    bleCharBaudRate.setEventHandler(BLEWritten, buadRateUpdateCB);
+
+    // The Message char
+    sf_bleprop_string(bleCharMessage, "Device Message"); // setup property descriptor        
+    theService.addCharacteristic(bleCharMessage);  
+    bleCharMessage.setValue(strMessage);
+    bleCharMessage.setEventHandler(BLEWritten, messageUpdateCB);    
+        
+
+    // Sensor Settings group
+    sf_bleprop_group(bleCharSampleRate, "Sensor Settings");  
+    // The Sample Rate char
+    sf_bleprop_range(bleCharSampleRate, "Sample Rate (sec)", sampleRateMin, sampleRateMax); // setup property descriptor            
+    theService.addCharacteristic(bleCharSampleRate);
+    bleCharSampleRate.setValue(sampleRate);     
+    bleCharSampleRate.setEventHandler(BLEWritten, sampleRateUpdateCB);             
 
     // The Offset (float) char
     sf_bleprop_float(bleCharOffset, "Offset Bias"); // setup property descriptor                    

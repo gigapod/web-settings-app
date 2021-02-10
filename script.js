@@ -71,6 +71,9 @@ class Property{
     }
     
     init(){
+
+        this.enableNotifications();
+
         return new Promise( (resolve) => {
 
             // check for group title
@@ -80,10 +83,10 @@ class Property{
                     // decode name, set in instance data
                     let grpName= dataToText(value);
                     if(grpName.length > 2){
-                        let div = document.createElement("div");
+                        this.group= document.createElement("div");
 
-                        div.innerHTML = ` <h2 class="title">`+ grpName + `</h2>`;  
-                        document.getElementById(targetID).appendChild(div);
+                        this.group.innerHTML = ` <h2 class="title">`+ grpName + `</h2>`;  
+                        document.getElementById(targetID).appendChild(this.group);
                     }
                 });
             }
@@ -107,19 +110,38 @@ class Property{
                 console.log(error);
                 resolve(-1);
             });
+
         });
 
     }
 
-    generateElement(){} // stub
+    
+    updateValue(value){}
+    update(){
+        this.characteristic.readValue().then( value =>{
+            this.updateValue(value);
+        });
+    }
+    enableNotifications(){
+        if(this.characteristic){
+            let target = this;
+            this.characteristic.addEventListener('characteristicvaluechanged', function(event){
+                target.updateValue(event.target.value);
+            });
+        }
+    }
 
     deleteElement(){
 
-        if(!this.div){
-            return;
+        if(this.div){
+            this.div.remove();
+            this.div=null;
         }
-        this.div.remove();
-        this.div=null;
+        if(this.group){
+            this.group.remove();
+            this.group=null;
+        }
+
     }
 }
 // -------------------------------------------
@@ -143,22 +165,16 @@ class boolProperty extends Property{
    		this.inputField.addEventListener("change", () => {
    			this.saveValue();
    		});
-   		this.updateValue();   			
+   		this.update();   			
    	}
 
-    updateValue(){
-
-        // get the value from the BLE char and place it in the field
-        this.characteristic.readValue().then( value =>{
-            //console.log(`The  ${this.name} is: ${value.getUint8(0, true)}`);
-            this.inputField.checked = value.getUint8(0, true);
-        });
+    updateValue(value){
+        this.inputField.checked = value.getUint8(0, true);
     }
 
     saveValue(){
 
         // Get the value from the input field and save it to the characteristic
-
         let buff = new ArrayBuffer(1);
         let newValue = new Uint8Array(buff);
         newValue[0] = this.inputField.checked;
@@ -175,22 +191,23 @@ class rangeProperty extends Property{
     init(){
         return new Promise( (resolve) => {
             // Get Min and Max of Range
+            this.min =0;
+            this.max=100;
             let descMin = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEPropRangeMinUUID); 
             if(descMin == null ){
-                console.log("No min value for range property. Setting to 0");
-                this.min = 0;
+                console.log("No min value for range property");
+                resolve(-1);
             }                      
             descMin.readValue().then(value =>{
                 this.min = value.getInt32(0,true);
             }).catch(error => {
                 console.log("Get range property Min failed" + error);
-                this.min=0;
             });
 
             let descMax = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEPropRangeMaxUUID); 
             if(descMax == null ){
                 console.log("No max value for range property. Setting to 100");
-                this.max = 100;
+                resolve(-1);
             }                      
             descMax.readValue().then(value =>{
                 this.max = value.getInt32(0, true);
@@ -203,7 +220,6 @@ class rangeProperty extends Property{
 
             }).catch(error => {
                 console.log("Get range property Max failed" + error);
-                this.max = 100;
                 resolve(-1);
             });
 
@@ -239,18 +255,13 @@ class rangeProperty extends Property{
    			this.saveValue();
    		});
    		// and now update to the current value
-   		this.updateValue();   			
+   		this.update();   			
    	}
 
-   	updateValue(){
-        // get the value from the BLE char and place it in the field
-        this.characteristic.readValue().then( value =>{
-            this.input.value = value.getInt32(0, true);
-           // send an event to the thing to trigger ui update
-           this.input.dispatchEvent(new Event('input'));
-        });
-
-
+    updateValue(value){
+        this.input.value = value.getInt32(0, true);
+        // send an event to the thing to trigger ui update
+        this.input.dispatchEvent(new Event('input'));
     }
 
     saveValue(){
@@ -281,19 +292,11 @@ class textProperty extends Property{
    		this.inputField.addEventListener("change", () => {
    			this.saveValue();
    		});
-   		this.updateValue();   			
+   		this.update();   			
    	}
 
-	updateValue(){
-        // get the value from the BLE char and place it in the field
-        //console.log("Update Value Text");
-
-        // get the value from the BLE char and place it in the field
-        this.characteristic.readValue().then( value =>{
-           /// console.log(`The  ${this.name} is: ${value.getUint32(0, true)}`);
-            this.inputField.value = dataToText(value);
-
-        });
+	updateValue(value){
+        this.inputField.value = dataToText(value);
     }
 
     saveValue(){
@@ -324,14 +327,12 @@ class intProperty extends Property{
    		this.inputField.addEventListener("change", () => {
    			this.saveValue();
    		});
-   		this.updateValue();   			
+   		this.update();   			
    	}
 
-    updateValue(){
+    updateValue(value){
         // get the value from the BLE char and place it in the field
-        this.characteristic.readValue().then( value =>{
-            this.inputField.value = value.getInt32(0, true);
-        });
+        this.inputField.value = value.getInt32(0, true);
     }
 
     saveValue(){
@@ -369,32 +370,25 @@ class dateProperty extends Property{
         this.inputField.addEventListener("change", () => {
             this.saveValue();
         });
-        this.updateValue();             
+        this.update();             
     }
 
-    updateValue(){
+    updateValue(value){
         // get the value from the BLE char and place it in the field
-        //console.log("Update Value Text");
-        //this.inputField = "2021-02-02";
+        // Check for a valid date format...
+        let digits = dataToText(value).split("-", 3).concat(['','']);
 
-        // get the value from the BLE char and place it in the field
-        this.characteristic.readValue().then( value =>{
-           
-            // Check for a valid date format...
-            let digits = dataToText(value).split("-", 3).concat(['','']);
+        // if any of the digits are not a digit, default to current date
+        if(isNaN(digits[0]) || isNaN(digits[1]) || isNaN(digits[2])){
+            let currTime = new Date();                
+            digits = [currTime.getFullYear(), currTime.getMonth(), currTime.getDay()];
+        } 
+        if(digits[0].length == 2){ // short year value?
+            digits[0] = '20'+digits[0];
+        }
 
-            // if any of the digits are not a digit, default to current date
-            if(isNaN(digits[0]) || isNaN(digits[1]) || isNaN(digits[2])){
-                let currTime = new Date();                
-                digits = [currTime.getFullYear(), currTime.getMonth(), currTime.getDay()];
-            } 
-            if(digits[0].length == 2){ // short year value?
-                digits[0] = '20'+digits[0];
-            }
-            // set value - pad month and day numbers with zeros
-            this.inputField.value = [digits[0], ('0'+digits[1]).slice(-2), ('0'+digits[2]).slice(-2)].join('-');
-
-        });
+        // set value - pad month and day numbers with zeros
+        this.inputField.value = [digits[0], ('0'+digits[1]).slice(-2), ('0'+digits[2]).slice(-2)].join('-');
     }
 
     saveValue(){
@@ -429,29 +423,20 @@ class timeProperty extends Property{
         this.inputField.addEventListener("change", () => {
             this.saveValue();
         });
-        this.updateValue();             
+        this.update();             
     }
 
-    updateValue(){
-        // get the value from the BLE char and place it in the field
-        //console.log("Update Value Text");
-        //this.inputField = "HH:MM";
+    updateValue(value){
+        // Check for a valid time - split value, concat empty value to ensure 2 elements
+        let digits = dataToText(value).split(":", 2).concat('');
 
-        // get the value from the BLE char and place it in the field
-        this.characteristic.readValue().then( value =>{
-
-            // Check for a valid time - split value, concat empty value to ensure 2 elements
-            let digits = dataToText(value).split(":", 2).concat('');
-
-            // if any of the time value are not a digit, default to current time
-            if(isNaN(digits[0]) || isNaN(digits[1])){
-                let currTime = new Date();                
-                digits = [currTime.getHours(), currTime.getMinutes()];
-            } 
-            // set value - pad numbers with zeros
-            this.inputField.value = [('0'+digits[0]).slice(-2), ('0'+digits[1]).slice(-2)].join(':');
-
-        });
+        // if any of the time value are not a digit, default to current time
+        if(isNaN(digits[0]) || isNaN(digits[1])){
+            let currTime = new Date();                
+            digits = [currTime.getHours(), currTime.getMinutes()];
+        } 
+        // set value - pad numbers with zeros
+        this.inputField.value = [('0'+digits[0]).slice(-2), ('0'+digits[1]).slice(-2)].join(':');
     }
 
     saveValue(){
@@ -484,16 +469,13 @@ class floatProperty extends Property{
       this.inputField.addEventListener("change", () => {
         this.saveValue();
       });
-      this.updateValue();         
+      this.update();         
     }
 
-    updateValue(){
-        // get the value from the BLE char and place it in the field
-        this.characteristic.readValue().then( value =>{
-            // We are limiting floats to three decimal places.
-            // Round out the floating number noise
-            this.inputField.value = Math.round((value.getFloat32(0,true) + Number.EPSILON)*1000)/1000;
-        });
+    updateValue(value){
+        // We are limiting floats to three decimal places.
+        // Round out the floating number noise
+        this.inputField.value = Math.round((value.getFloat32(0,true) + Number.EPSILON)*1000)/1000;
     }
 
     saveValue(){
@@ -545,7 +527,7 @@ async function renderProperties(){
     // first sort our props so they display as desired
     currentProperties.sort(compairPropOrder);
 
-    // build the UX for each property
+    // build the UX for each property - want this is order -- so wait 
     for(const aProp of currentProperties){
         let result = await aProp.init();
     }
@@ -575,6 +557,7 @@ function addPropertyToSystem(bleCharacteristic){
                 console.log("No type descriptor found.")
                 resolve(-1);
             }
+            //console.log(descs);
             // Get the value of the type descriptor
             descType.readValue().then(value =>{
 

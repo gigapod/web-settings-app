@@ -111,7 +111,7 @@ void onEnabledUpdate(bool newValue){
     deviceEnabled = newValue;
     digitalWrite(LED_BUILTIN, (deviceEnabled ? HIGH : LOW));    
 }
-void setupEnabledCharacteristic(BLEService *pService){
+BLECharacteristic * setupEnabledCharacteristic(BLEService *pService){
 
     BLECharacteristic *pCharBaud;
 
@@ -126,6 +126,7 @@ void setupEnabledCharacteristic(BLEService *pService){
 
     sf_bleprop_bool(pCharBaud, "Device Enabled");
     
+    return pCharBaud;
 }
 
 
@@ -139,7 +140,7 @@ void onBaudUpdate(int32_t newValue){
     Serial.print("Update Baud Value: "); 
     Serial.println(baudRate);
 }
-void setupBaudCharacteristic(BLEService *pService){
+BLECharacteristic * setupBaudCharacteristic(BLEService *pService){
 
     BLECharacteristic *pCharBaud;
 
@@ -154,7 +155,7 @@ void setupBaudCharacteristic(BLEService *pService){
 
     sf_bleprop_int(pCharBaud, "Output Baud Value");
     
-
+    return pCharBaud;
 }
 //---------------------------------------------------------------------------------
 // Message Characterisitic 
@@ -166,7 +167,7 @@ void onMessageUpdate(std::string &  newValue){
     Serial.print("Update Message Value: "); 
     Serial.println(newValue.c_str());
 }
-void setupMessageCharacteristic(BLEService *pService){
+BLECharacteristic * setupMessageCharacteristic(BLEService *pService){
 
     BLECharacteristic *pCharBaud;
 
@@ -181,6 +182,7 @@ void setupMessageCharacteristic(BLEService *pService){
 
     sf_bleprop_string(pCharBaud, "Device Message");
 
+    return pCharBaud;
 }
 
 
@@ -194,7 +196,7 @@ void onSampleRateUpdate(int32_t newValue){
     Serial.print("Update Sample Value: "); 
     Serial.println(sampleRate);
 }
-void setupSampleRateCharacteristic(BLEService *pService){
+BLECharacteristic * setupSampleRateCharacteristic(BLEService *pService){
 
 
     BLECharacteristic *pCharRate;
@@ -210,6 +212,7 @@ void setupSampleRateCharacteristic(BLEService *pService){
 
     sf_bleprop_range(pCharRate, "Sample Rate (sec)", sampleRateMin, sampleRateMax);
 
+    return pCharRate;
 }
 
 //---------------------------------------------------------------------------------
@@ -222,7 +225,7 @@ void onDateUpdate(std::string &  newValue){
     Serial.print("Update Date Value: "); 
     Serial.println(newValue.c_str());
 }
-void setupDateCharacteristic(BLEService *pService){
+BLECharacteristic * setupDateCharacteristic(BLEService *pService){
 
     BLECharacteristic *pCharDate;
 
@@ -237,7 +240,8 @@ void setupDateCharacteristic(BLEService *pService){
 
     sf_bleprop_date(pCharDate, "Start Date");
 
-    sf_bleprop_group(pCharDate, "Event Details");    
+
+    return pCharDate;   
 }
 //---------------------------------------------------------------------------------
 // Time Characterisitic 
@@ -249,7 +253,7 @@ void onTimeUpdate(std::string &  newValue){
     Serial.print("Update Time Value: "); 
     Serial.println(newValue.c_str());
 }
-void setupTimeCharacteristic(BLEService *pService){
+BLECharacteristic * setupTimeCharacteristic(BLEService *pService){
 
     BLECharacteristic *pCharTime;
 
@@ -264,6 +268,7 @@ void setupTimeCharacteristic(BLEService *pService){
 
     sf_bleprop_time(pCharTime, "Start Time");
 
+    return pCharTime;
 }
 
 //---------------------------------------------------------------------------------
@@ -276,7 +281,7 @@ void onOffsetUpdate(float newValue){
     Serial.print("Update Offset(float) Value: "); 
     Serial.println(newValue);
 }
-void setupOffsetCharacteristic(BLEService *pService){
+BLECharacteristic * setupOffsetCharacteristic(BLEService *pService){
 
     BLECharacteristic *pCharOff;
 
@@ -290,6 +295,8 @@ void setupOffsetCharacteristic(BLEService *pService){
     pCharOff->setCallbacks(new FloatPropertyValueCB(&offsetValue, onOffsetUpdate));
 
     sf_bleprop_float(pCharOff, "Offset Bias");
+
+    return pCharOff;
 
 }
 //---------------------------------------------------------------------------------
@@ -311,14 +318,24 @@ void setup() {
     BLEService *pService = pServer->createService(BLEUUID(kTargetServiceUUID), 35, 1);
 
     //Setup characterstics
+
+    BLECharacteristic *pChar;
+
     setupEnabledCharacteristic(pService);
-    setupBaudCharacteristic(pService);
-    setupSampleRateCharacteristic(pService);
+
+    pChar = setupDateCharacteristic(pService);
+    sf_bleprop_group(pChar, "Event Details");         
+    setupTimeCharacteristic(pService); 
+
+    pChar = setupBaudCharacteristic(pService);
+    sf_bleprop_group(pChar, "Device Settings");     
     setupMessageCharacteristic(pService);
 
-    setupDateCharacteristic(pService);
-    setupTimeCharacteristic(pService); 
-    setupOffsetCharacteristic(pService);   
+
+    pChar = setupSampleRateCharacteristic(pService);
+    sf_bleprop_group(pChar, "Sensor Settings");     
+    setupOffsetCharacteristic(pService);  
+
 
     pService->start();
 
