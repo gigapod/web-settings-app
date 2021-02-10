@@ -16,6 +16,7 @@
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
+#include <BLE2902.h>
 
 #include "ESP32_BLE_Config.h"
 
@@ -70,8 +71,11 @@ std::string strTime("2:5"); // test value - will be parsed as 02:05
 // A float property - "offset value"
 float offsetValue = 4.124;
 
+BLECharacteristic *pCharOffset; // will use later
+unsigned long ticks; // used for notification
+
 bool deviceConnected = false;
-bool newConfig = true;
+
 
 class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
@@ -334,7 +338,9 @@ void setup() {
 
     pChar = setupSampleRateCharacteristic(pService);
     sf_bleprop_group(pChar, "Sensor Settings");     
-    setupOffsetCharacteristic(pService);  
+    pCharOffset = setupOffsetCharacteristic(pService);  
+    // On ESP32 - to enable notification, you need to add a special descriptor
+    pCharOffset->addDescriptor(new BLE2902());
 
 
     pService->start();
@@ -355,41 +361,25 @@ void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, (deviceEnabled ? HIGH : LOW));
 
+    ticks = millis();
     Serial.println("BLE Started");
 }
 
 void loop() {
-  delay(200);
 
-  if (newConfig == true)
-  {
-    newConfig = false;
+    delay(200);
 
-    Serial.print("Baud rate:");
-    Serial.println(baudRate);
-  }
+    if(millis() - ticks > 5000){
+        // Update the value of offset and set in BLE char
+        // Should trigger a notification on client
 
-  if (Serial.available())
-  {
-    byte incoming = Serial.read();
-
-    if (incoming == '1')
-    {
-      //baudCharacteristic->setValue("Value 1");
-      Serial.println("Val set");
-    }
-    else if (incoming == '2')
-    {
-      //baudCharacteristic->setValue("Value 2");
-      Serial.println("Val set");
-    }
-    else
-    {
-      Serial.println("Unknown");
+        offsetValue += .5;
+        if(deviceConnected){
+            pCharOffset->setValue(offsetValue);
+            pCharOffset->notify();
+            Serial.print("Incrementing Offset to: "); Serial.println(offsetValue);
+        }
+        ticks = millis();
     }
 
-    delay(10);
-    while (Serial.available()) Serial.read(); //Clear buffer
-
-  }
 }
