@@ -27,7 +27,7 @@
 //   - Update UX to look at attribute byte. 
 //  
 // BLE UUID Codes for our Protocol Descriptors 
-#define kBLEDescCharNameUUID            "2901"
+#define kBLEDescCharNameUUID            "A100"
 #define kBLEDescSFEPropTypeUUID         "A101"
 #define kBLEDescSFEPropRangeMinUUID     "A110"
 #define kBLEDescSFEPropRangeMaxUUID     "A111"
