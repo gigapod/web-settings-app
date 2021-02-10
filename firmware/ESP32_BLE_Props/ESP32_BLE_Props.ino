@@ -1,68 +1,67 @@
 /*
-  Set a baud rate to 115200bps over BLE
-
-  Adding descriptor
-  https://github.com/espressif/arduino-esp32/blob/master/libraries/BLE/src/BLECharacteristic.h
-  https://gist.github.com/heiko-r/f284d95141871e12ca0164d9070d61b4
-  Roughly working Characteristic descriptor: https://github.com/espressif/arduino-esp32/issues/1038
-
-  Float to string: https://iotbyhvm.ooo/esp32-ble-tutorials/
-
-  Custom UUIDs? https://www.bluetooth.com/specifications/assigned-numbers/
-
-  ESP32 with chrome: https://github.com/kpatel122/ESP32-Web-Bluetooth-Terminal/blob/master/ESP32-BLE/ESP32-BLE.ino
-*/
+ *
+ * SparkFun ESP32 BLE Settings App Example
+ * =======================================
+ *
+ * [TODO - Descripton, attribution and license]
+ *
+ */
 #include <string>
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
+
+// Include BLE2902 - used to enable BLE notifications on a Characterisitcs.
 #include <BLE2902.h>
 
 #include "ESP32_BLE_Config.h"
 
+// Include SparkFun functions to define "properties" out of characteristics
+// This enables use of the SparkFun BLE Settings Web-App
 #include "sf_ble_prop.h"
 
-
 #define LED_BUILTIN 13
+
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
 
 #define kTargetServiceUUID  "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+// Name of this app/service
 #define kTargetServiceName  "ESP32 App"
-//--------------------------------------------------------------------------------------
 
 //--------------------------------------------------------------------------------------
-// Property Creation and Management
-//
-// Dynamically create and manage properties
-//--------------------------------------------------------------------------------------
-
-
-
 // Our Characteristic UUIDs - and yes, just made these up
-#define kCharacteristicBaudUUID     "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-#define kCharacteristicEnabledUUID  "beb5483e-36e1-4688-b7f5-ea07361b26a9"
-#define kCharacteristicMessageUUID  "beb5483e-36e1-4688-b7f5-ea07361b26aa"
-#define kCharacteristicSampleUUID   "beb5483e-36e1-4688-b7f5-ea07311b260b"
-#define kCharacteristicDateUUID     "beb5483e-36e1-4688-b7f5-ea07311b260c"
-#define kCharacteristicTimeUUID     "beb5483e-36e1-4688-b7f5-ea07311b260d"
-#define kCharacteristicOffsetUUID     "beb5483e-36e1-4688-b7f5-ea07311b260e"
+//--------------------------------------------------------------------------------------
+#define kCharacteristicBaudUUID         "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+#define kCharacteristicEnabledUUID      "beb5483e-36e1-4688-b7f5-ea07361b26a9"
+#define kCharacteristicSSIDUUID         "beb5483e-36e1-4688-b7f5-ea07361b26aa"
+#define kCharacteristicPasswordUUID     "beb5483e-36e1-4688-b7f5-ea07361b26ab"
+#define kCharacteristicSampleUUID       "beb5483e-36e1-4688-b7f5-ea07311b260b"
+#define kCharacteristicDateUUID         "beb5483e-36e1-4688-b7f5-ea07311b260c"
+#define kCharacteristicTimeUUID         "beb5483e-36e1-4688-b7f5-ea07311b260d"
+#define kCharacteristicOffsetUUID       "beb5483e-36e1-4688-b7f5-ea07311b260e"
 
+//-------------------------------------------------------------------------
+// BLE Characteristics require persistant values for data storage. Nothing stack-based.
+//-------------------------------------------------------------------------
+//
+// The following define the values (property values) used in this example
 
 // PROPERTY Data/Local Variables
 uint32_t baudRate = 115200;
 
 bool deviceEnabled = true;
 
-// message prop
-std::string strMessage("Welcome");
+// SSID and password prop
+std::string strSSID("myWiFiNetwork");
+std::string strPassword("HelloWiFi");
 
 // sample rate prop (a range)
 uint32_t sampleRate = 123;
 uint32_t sampleRateMin = 10;
 uint32_t sampleRateMax = 240;
 
-// Date prop - date is a string "YYYY-MM-DD"
+// Date prop - date is a string "YYYY-MM-DD"  - formatting is important
 std::string strDate("2021-03-01");
 
 // Time prop - date is a string "HH:MM" - 
@@ -71,11 +70,18 @@ std::string strTime("2:5"); // test value - will be parsed as 02:05
 // A float property - "offset value"
 float offsetValue = 4.124;
 
-BLECharacteristic *pCharOffset; // will use later
+BLECharacteristic *pCharOffset; // will use later for notifications.
 unsigned long ticks; // used for notification
 
-bool deviceConnected = false;
 
+//-------------------------------------------------------------------------
+// A BLE client (device) is connected logic.
+//-------------------------------------------------------------------------
+//
+// The system is setup to call callback methods to the below object. 
+// A bool is used to keep track of connected state..
+
+bool deviceConnected = false;
 
 class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
@@ -102,8 +108,15 @@ int32_t stringToValue(std::string myString)
 
   return (newValue);
 }
-
-//---------------------------------------------------------------------------------
+//-------------------------------------------------------------------------
+// Characteristic Setup Section
+//-------------------------------------------------------------------------
+// The following functions are used to setup specific characteristics
+//
+// Consisist of a setup function and a callback function that the BLE system
+// will call on a value update.
+//
+//-------------------------------------------------------------------------
 // Enabled Characterisitic 
 //
 // A Bool Characterisitic (property) example
@@ -162,34 +175,58 @@ BLECharacteristic * setupBaudCharacteristic(BLEService *pService){
     return pCharBaud;
 }
 //---------------------------------------------------------------------------------
-// Message Characterisitic 
+// SSID Characterisitic 
 //
 // A String Characterisitic (property) example
 
-void onMessageUpdate(std::string &  newValue){
+void onSSIDUpdate(std::string &  newValue){
 
-    Serial.print("Update Message Value: "); 
+    Serial.print("Update SSID Value: "); 
     Serial.println(newValue.c_str());
 }
-BLECharacteristic * setupMessageCharacteristic(BLEService *pService){
+BLECharacteristic * setupSSIDCharacteristic(BLEService *pService){
 
-    BLECharacteristic *pCharBaud;
+    BLECharacteristic *pChar;
 
-    pCharBaud = pService->createCharacteristic(
-                            kCharacteristicMessageUUID,
+    pChar = pService->createCharacteristic(
+                            kCharacteristicSSIDUUID,
                             BLECharacteristic::PROPERTY_READ  |
-                            BLECharacteristic::PROPERTY_WRITE |
-                            BLECharacteristic::PROPERTY_NOTIFY );
+                            BLECharacteristic::PROPERTY_WRITE );
 
     // Set the value in the callbacks 
-    pCharBaud->setCallbacks(new TextPropertyValueCB(strMessage, onMessageUpdate));
+    pChar->setCallbacks(new TextPropertyValueCB(strSSID, onSSIDUpdate));
 
-    sf_bleprop_string(pCharBaud, "Device Message");
+    sf_bleprop_string(pChar, "SSID");
 
-    return pCharBaud;
+    return pChar;
 }
 
+//---------------------------------------------------------------------------------
+// WiFi Password Characterisitic 
+//
+// A String Characterisitic (property) example
 
+void onPasswordUpdate(std::string &  newValue){
+
+    Serial.print("Update WiFi Password Value: "); 
+    Serial.println(newValue.c_str());
+}
+BLECharacteristic * setupPasswordCharacteristic(BLEService *pService){
+
+    BLECharacteristic *pChar;
+
+    pChar = pService->createCharacteristic(
+                            kCharacteristicPasswordUUID,
+                            BLECharacteristic::PROPERTY_READ  |
+                            BLECharacteristic::PROPERTY_WRITE );
+
+    // Set the value in the callbacks 
+    pChar->setCallbacks(new TextPropertyValueCB(strPassword, onPasswordUpdate));
+
+    sf_bleprop_string(pChar, "Password");
+
+    return pChar;
+}
 //---------------------------------------------------------------------------------
 // Sample Rate Characterisitic 
 //
@@ -304,45 +341,75 @@ BLECharacteristic * setupOffsetCharacteristic(BLEService *pService){
 
 }
 //---------------------------------------------------------------------------------
+// Setup our system
+//---------------------------------------------------------------------------------
 
 void setup() {
+
     Serial.begin(115200);
     Serial.println("Starting BLE work!");
 
+    // Init BLE  - give it our device name.
     BLEDevice::init(kTargetServiceName);
 
+    // Create our BLE Server - And add callback object (defined above)
+    // The callback is used to keep track if a device is connected or not.
     BLEServer *pServer = BLEDevice::createServer();
     pServer->setCallbacks(new MyServerCallbacks());
 
     // >>> NOTE <<<
     // When creating a service. The default - when you just pass in a UUID,
-    // only creates 15 handles. This isn't enough to support the 4 characteristics 
-    // in this demo. Setting this to 20 allows for 4 Characteristics.
+    // only creates 15 handles. This isn't enough to support the > 3 characteristics 
+    // in this demo. Setting this to 5 per Characteristic seems to work.
     // see: https://github.com/nkolban/ESP32_BLE_Arduino/blob/master/src/BLEServer.cpp
-    BLEService *pService = pServer->createService(BLEUUID(kTargetServiceUUID), 35, 1);
+    // 
+    // Defining these here to highlight this concept. A
+#define NUMBER_OF_CHARACTERISTICS 8
+#define ESP32_BLE_HANDLES_PER_CHAR 5
+    BLEService *pService = pServer->createService(BLEUUID(kTargetServiceUUID), 
+            NUMBER_OF_CHARACTERISTICS * ESP32_BLE_HANDLES_PER_CHAR, 1);
 
-    //Setup characterstics
+    // >>> Characteristics Setup <<<
+    //
+    // The order of the setup calls, sets the order the characteristics (properties)
+    // in the property/settings application. 
+    //
+    // A grouping title/area in the settings application is defined by adding a title
+    // to the first Characteristic in that group. **ONLY** do this on the first 
+    // characterisitic of the group - it's just a title, nothing more.
 
     BLECharacteristic *pChar;
 
     setupEnabledCharacteristic(pService);
 
+    // Event Details Group
     pChar = setupDateCharacteristic(pService);
-    sf_bleprop_group(pChar, "Event Details");         
+    sf_bleprop_group_title(pChar, "Event Details");     // Add title to 1st char    
     setupTimeCharacteristic(pService); 
 
+    // Device Settings
     pChar = setupBaudCharacteristic(pService);
-    sf_bleprop_group(pChar, "Device Settings");     
-    setupMessageCharacteristic(pService);
+    sf_bleprop_group_title(pChar, "Device Settings"); // Title
 
+    // WiFi Settings
+    pChar = setupSSIDCharacteristic(pService);
+    sf_bleprop_group_title(pChar, "WiFi Settings"); // Group title
+    setupPasswordCharacteristic(pService);    
 
+    // Sensor Settings 
     pChar = setupSampleRateCharacteristic(pService);
-    sf_bleprop_group(pChar, "Sensor Settings");     
+    sf_bleprop_group_title(pChar, "Sensor Settings");     // Group title
+
+    // >> Notifications <<
+    //
+    // Will send update settings of this characteristic - save the Characterisitc pointer
+    // for use in loop, and add the BLE2902 descriptor which is used for BLE Notifications.
     pCharOffset = setupOffsetCharacteristic(pService);  
     // On ESP32 - to enable notification, you need to add a special descriptor
     pCharOffset->addDescriptor(new BLE2902());
 
 
+    // Startup up the system and start BLE advertising
     pService->start();
 
     //Begin broadcasting
@@ -358,9 +425,11 @@ void setup() {
     pAdvertising->setMinPreferred(0x12);
     BLEDevice::startAdvertising();
 
+    // We're up, LED ON
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, (deviceEnabled ? HIGH : LOW));
 
+    // Keep track of millis to support our Notification example in loop
     ticks = millis();
     Serial.println("BLE Started");
 }
@@ -369,9 +438,15 @@ void loop() {
 
     delay(200);
 
+    // >> Update and Notification Example <<
+    //
+    // This section updates the offset characterisitc value every 5 secs if a
+    // device is connected. Demostrates how to send a notification using the 
+    // ESP32 BLE API.
     if(millis() - ticks > 5000){
-        // Update the value of offset and set in BLE char
-        // Should trigger a notification on client
+
+        // Update the value of offset and set new value in the target Char.
+        // Then send notification
 
         offsetValue += .5;
         if(deviceConnected){

@@ -112,12 +112,19 @@ void sf_bleprop_range(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName,
 
     _sf_bleprop_core(bleChar, strName, kSFEPropTypeRange);
 
-    _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropRangeMinUUID, ( uint8_t*)&vMin, sizeof(vMin));    
-    _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropRangeMaxUUID, ( uint8_t*)&vMax, sizeof(vMax));        
+    // Descriptor values must be persistant, not stack-based. Expect users not to care/know,
+    // so alloc copies..
+    uint32_t * pMin = new uint32_t;
+    uint32_t * pMax = new uint32_t;    
+
+    *pMin = vMin;
+    *pMax = vMax;
+    _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropRangeMinUUID, ( uint8_t*)pMin, sizeof(uint32_t));    
+    _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropRangeMaxUUID, ( uint8_t*)pMax, sizeof(uint32_t));        
 
 }
 
-void sf_bleprop_group(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strGroup){
+void sf_bleprop_group_title(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strGroup){
 
     _sf_bleprop_add_desc(bleChar, kBLEDescSFEGroupTitleUUID, ( uint8_t*)strGroup, strlen(strGroup));        
 }
