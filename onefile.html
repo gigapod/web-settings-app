@@ -3,8 +3,9 @@
 <head>
 	<meta charset="UTF-8">
   	<title>SparkFun BLE Settings App</title>
-<style type="text/css">
-	* {
+
+ <style type="text/css">
+ * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -371,8 +372,8 @@ a:hover {
 }
 .sparkfun-corner:hover svg { mix-blend-mode: normal;}
 .sparkfun-corner:hover .sparkfun-flame {color: #ff0000;}
-
-</style>
+	
+ </style>
  	<!-- Add some branding -->
 	<a class="sparkfun-corner" href="https://sparkfun.com" title="SparkFun Electronics" target="_blank">
 	<svg width="80" height="80" viewbox="0 0 80 80">
@@ -388,20 +389,19 @@ a:hover {
 	<h2 class="title" id='settings-title'>SparkFun Settings</h2>
 	<button class="btn generate" id="connect">Connect to Device</button>
 	<div class="settings" id="settings-container">
-		<h2 class="title">Settings</h2>	
 	</div>
 </div>
 
 <!-- javascript -->
 <script type="text/javascript">
-
+	
 // App to connect to an embedded device (like SparkFun OpenLog) and manage settings via BLE
 
 
 // SETUP - Define the Target BLE Service
 //--------------------------------------------------------------------------------------
 const kTargetServiceUUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
-const kTargetServiceName = "OpenLog";
+const kTargetServiceName = "SparkFun Board";
 //--------------------------------------------------------------------------------------
 
 console.clear();
@@ -413,10 +413,11 @@ console.clear();
 //--------------------------------------------------------------------------------------
 
 // BLE Codes for our service
-const kBLEDescCharNameUUID = 0x2901;
+const kBLEDescCharNameUUID = 0xA100;
 const kBLEDescSFEPropTypeUUID = 0xA101;
 const kBLEDescSFEPropRangeMinUUID = 0xA110;
 const kBLEDescSFEPropRangeMaxUUID = 0xA111;
+const kBLEDescSFEGroupTitleUUID = 0xA112;
 
 // Property type codes - sent as a value of the char descriptor 
 const kSFEPropTypeBool      = 0x1;
@@ -462,42 +463,87 @@ class Property{
     	this.ID = "property-" + namecnt++;  // unique id for the DOM
         this.div = null;
         this.timer=-1;
+        this.group=null;
     }
-
+    
     init(){
+
+        // For now - enable notifications on all values ...
+       this.enableNotifications();
+
         return new Promise( (resolve) => {
-            // get the name of this prop
-            this.characteristic.getDescriptor(kBLEDescCharNameUUID).then(desc =>{
 
-                desc.readValue().then(value =>{
+            // check for group title
+            let descgrp = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEGroupTitleUUID);
+            if(descgrp){
+                descgrp.readValue().then(value =>{
                     // decode name, set in instance data
-                    this.name = dataToText(value);
+                    let grpName= dataToText(value);
+                    if(grpName.length > 2){
+                        this.group= document.createElement("div");
 
-                    // We have the name - call method to generate UX and complete setup
-                    this.generateElement();
-                    resolve(0);
-
-                }).catch(error => {
-                    console.log(error);
-                    resolve(-1);
+                        this.group.innerHTML = ` <h2 class="title">`+ grpName + `</h2>`;  
+                        document.getElementById(targetID).appendChild(this.group);
+                    }
                 });
+            }
+
+            // get the name of this prop
+            let descName = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescCharNameUUID);
+            
+            if(descName == null){
+                console.log("Error getting property name value");
+                resolve(-1);
+            }
+            descName.readValue().then(value =>{
+                // decode name, set in instance data
+                this.name = dataToText(value);
+
+                // We have the name - call method to generate UX and complete setup
+                this.generateElement();
+                resolve(0);
+
             }).catch(error => {
                 console.log(error);
-                resolve(-2);
+                resolve(-1);
             });
+
         });
 
     }
 
-    generateElement(){} // stub
+    
+    updateValue(value){}
+    update(){
+        this.characteristic.readValue().then( value =>{
+            this.updateValue(value);
+        });
+    }
+    enableNotifications(){
+        if(this.characteristic){
+            this.characteristic.startNotifications().then( _ =>{
+                let target = this;
+                this.characteristic.addEventListener('characteristicvaluechanged', function(event){
+                    target.updateValue(event.target.value);
+                });
+            }).catch(error => {
+                //console.log("Notifications not available.");
+                // just eat this 
+            });
+        }
+    }
 
     deleteElement(){
 
-        if(!this.div){
-            return;
+        if(this.div){
+            this.div.remove();
+            this.div=null;
         }
-        this.div.remove();
-        this.div=null;
+        if(this.group){
+            this.group.remove();
+            this.group=null;
+        }
+
     }
 }
 // -------------------------------------------
@@ -521,22 +567,16 @@ class boolProperty extends Property{
    		this.inputField.addEventListener("change", () => {
    			this.saveValue();
    		});
-   		this.updateValue();   			
+   		this.update();   			
    	}
 
-    updateValue(){
-
-        // get the value from the BLE char and place it in the field
-        this.characteristic.readValue().then( value =>{
-            //console.log(`The  ${this.name} is: ${value.getUint8(0, true)}`);
-            this.inputField.checked = value.getUint8(0, true);
-        });
+    updateValue(value){
+        this.inputField.checked = value.getUint8(0, true);
     }
 
     saveValue(){
 
         // Get the value from the input field and save it to the characteristic
-
         let buff = new ArrayBuffer(1);
         let newValue = new Uint8Array(buff);
         newValue[0] = this.inputField.checked;
@@ -550,46 +590,43 @@ const range_background = "rgba(255, 255, 255, 0.214)";
 
 class rangeProperty extends Property{
 
-    // TODO better error handling here
     init(){
         return new Promise( (resolve) => {
             // Get Min and Max of Range
-            this.characteristic.getDescriptor(kBLEDescSFEPropRangeMinUUID).then(desc =>{
-                desc.readValue().then(value =>{
-                    this.min = value.getInt32(0,true);
-
-                    this.characteristic.getDescriptor(kBLEDescSFEPropRangeMaxUUID).then(desc =>{
-                        desc.readValue().then(value =>{
-                            this.max = value.getInt32(0, true);
-
-                            // Call super - finish setup
-                            super.init().then(results =>{
-                                resolve(0);
-                            });
-
-                        }).catch(error => {
-                            console.log("Get range property Max failed" + error);
-                            this.max = 100;
-                            resolve(-1);
-                        });
-                    }).catch(error => {
-                        console.log("Get range property Max failed" + error);;
-                        this.max=100;
-                        resolve(-1);
-                    });
+            this.min =0;
+            this.max=100;
+            let descMin = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEPropRangeMinUUID); 
+            if(descMin == null ){
+                console.log("No min value for range property");
+                resolve(-1);
+            }                      
+            descMin.readValue().then(value =>{
+                this.min = value.getInt32(0,true);
             }).catch(error => {
                 console.log("Get range property Min failed" + error);
-                this.min=0;
+            });
+
+            let descMax = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEPropRangeMaxUUID); 
+            if(descMax == null ){
+                console.log("No max value for range property. Setting to 100");
+                resolve(-1);
+            }                      
+            descMax.readValue().then(value =>{
+                this.max = value.getInt32(0, true);
+
+                // TODO THIS NEEDS WORK
+                // Call super - finish setup
+                super.init().then(results =>{
+                    resolve(0);
+                });
+
+            }).catch(error => {
+                console.log("Get range property Max failed" + error);
                 resolve(-1);
             });
 
-        }).catch(error => {
-            console.log("Get range property Min failed" + error);
-            this.min=0;
-            resolve(-1);
         });
-    });
-}
+    }
     //------------------------
    	generateElement(){
 
@@ -620,18 +657,13 @@ class rangeProperty extends Property{
    			this.saveValue();
    		});
    		// and now update to the current value
-   		this.updateValue();   			
+   		this.update();   			
    	}
 
-   	updateValue(){
-        // get the value from the BLE char and place it in the field
-        this.characteristic.readValue().then( value =>{
-            this.input.value = value.getInt32(0, true);
-           // send an event to the thing to trigger ui update
-           this.input.dispatchEvent(new Event('input'));
-        });
-
-
+    updateValue(value){
+        this.input.value = value.getInt32(0, true);
+        // send an event to the thing to trigger ui update
+        this.input.dispatchEvent(new Event('input'));
     }
 
     saveValue(){
@@ -662,19 +694,11 @@ class textProperty extends Property{
    		this.inputField.addEventListener("change", () => {
    			this.saveValue();
    		});
-   		this.updateValue();   			
+   		this.update();   			
    	}
 
-	updateValue(){
-        // get the value from the BLE char and place it in the field
-        //console.log("Update Value Text");
-
-        // get the value from the BLE char and place it in the field
-        this.characteristic.readValue().then( value =>{
-           /// console.log(`The  ${this.name} is: ${value.getUint32(0, true)}`);
-            this.inputField.value = dataToText(value);
-
-        });
+	updateValue(value){
+        this.inputField.value = dataToText(value);
     }
 
     saveValue(){
@@ -705,14 +729,12 @@ class intProperty extends Property{
    		this.inputField.addEventListener("change", () => {
    			this.saveValue();
    		});
-   		this.updateValue();   			
+   		this.update();   			
    	}
 
-    updateValue(){
+    updateValue(value){
         // get the value from the BLE char and place it in the field
-        this.characteristic.readValue().then( value =>{
-            this.inputField.value = value.getInt32(0, true);
-        });
+        this.inputField.value = value.getInt32(0, true);
     }
 
     saveValue(){
@@ -750,32 +772,25 @@ class dateProperty extends Property{
         this.inputField.addEventListener("change", () => {
             this.saveValue();
         });
-        this.updateValue();             
+        this.update();             
     }
 
-    updateValue(){
+    updateValue(value){
         // get the value from the BLE char and place it in the field
-        //console.log("Update Value Text");
-        //this.inputField = "2021-02-02";
+        // Check for a valid date format...
+        let digits = dataToText(value).split("-", 3).concat(['','']);
 
-        // get the value from the BLE char and place it in the field
-        this.characteristic.readValue().then( value =>{
-           
-            // Check for a valid date format...
-            let digits = dataToText(value).split("-", 3).concat(['','']);
+        // if any of the digits are not a digit, default to current date
+        if(isNaN(digits[0]) || isNaN(digits[1]) || isNaN(digits[2])){
+            let currTime = new Date();                
+            digits = [currTime.getFullYear(), currTime.getMonth(), currTime.getDay()];
+        } 
+        if(digits[0].length == 2){ // short year value?
+            digits[0] = '20'+digits[0];
+        }
 
-            // if any of the digits are not a digit, default to current date
-            if(isNaN(digits[0]) || isNaN(digits[1]) || isNaN(digits[2])){
-                let currTime = new Date();                
-                digits = [currTime.getFullYear(), currTime.getMonth(), currTime.getDay()];
-            } 
-            if(digits[0].length == 2){ // short year value?
-                digits[0] = '20'+digits[0];
-            }
-            // set value - pad month and day numbers with zeros
-            this.inputField.value = [digits[0], ('0'+digits[1]).slice(-2), ('0'+digits[2]).slice(-2)].join('-');
-
-        });
+        // set value - pad month and day numbers with zeros
+        this.inputField.value = [digits[0], ('0'+digits[1]).slice(-2), ('0'+digits[2]).slice(-2)].join('-');
     }
 
     saveValue(){
@@ -810,29 +825,20 @@ class timeProperty extends Property{
         this.inputField.addEventListener("change", () => {
             this.saveValue();
         });
-        this.updateValue();             
+        this.update();             
     }
 
-    updateValue(){
-        // get the value from the BLE char and place it in the field
-        //console.log("Update Value Text");
-        //this.inputField = "HH:MM";
+    updateValue(value){
+        // Check for a valid time - split value, concat empty value to ensure 2 elements
+        let digits = dataToText(value).split(":", 2).concat('');
 
-        // get the value from the BLE char and place it in the field
-        this.characteristic.readValue().then( value =>{
-
-            // Check for a valid time - split value, concat empty value to ensure 2 elements
-            let digits = dataToText(value).split(":", 2).concat('');
-
-            // if any of the time value are not a digit, default to current time
-            if(isNaN(digits[0]) || isNaN(digits[1])){
-                let currTime = new Date();                
-                digits = [currTime.getHours(), currTime.getMinutes()];
-            } 
-            // set value - pad numbers with zeros
-            this.inputField.value = [('0'+digits[0]).slice(-2), ('0'+digits[1]).slice(-2)].join(':');
-
-        });
+        // if any of the time value are not a digit, default to current time
+        if(isNaN(digits[0]) || isNaN(digits[1])){
+            let currTime = new Date();                
+            digits = [currTime.getHours(), currTime.getMinutes()];
+        } 
+        // set value - pad numbers with zeros
+        this.inputField.value = [('0'+digits[0]).slice(-2), ('0'+digits[1]).slice(-2)].join(':');
     }
 
     saveValue(){
@@ -865,16 +871,13 @@ class floatProperty extends Property{
       this.inputField.addEventListener("change", () => {
         this.saveValue();
       });
-      this.updateValue();         
+      this.update();         
     }
 
-    updateValue(){
-        // get the value from the BLE char and place it in the field
-        this.characteristic.readValue().then( value =>{
-            // We are limiting floats to three decimal places.
-            // Round out the floating number noise
-            this.inputField.value = Math.round((value.getFloat32(0,true) + Number.EPSILON)*1000)/1000;
-        });
+    updateValue(value){
+        // We are limiting floats to three decimal places.
+        // Round out the floating number noise
+        this.inputField.value = Math.round((value.getFloat32(0,true) + Number.EPSILON)*1000)/1000;
     }
 
     saveValue(){
@@ -926,12 +929,14 @@ async function renderProperties(){
     // first sort our props so they display as desired
     currentProperties.sort(compairPropOrder);
 
-    // build the UX for each property
+    // build the UX for each property - want this is order -- so wait 
     for(const aProp of currentProperties){
         let result = await aProp.init();
     }
+    showProperties();
+    endConnecting(true);
     // still found the UX isn't all there yet ... wait a cycle or 2
-    setTimeout(function(){showProperties();}, 300);
+//    setTimeout(function(){showProperties();}, 100);
 }
 //--------------------------------------------------------------------------------------
 // Add a property to the system based on a BLE Characteristic
@@ -947,10 +952,17 @@ function addPropertyToSystem(bleCharacteristic){
     // with a lot of props ...
     return new Promise( (resolve) => {
         // Get the type descriptor
-        bleCharacteristic.getDescriptor(kBLEDescSFEPropTypeUUID).then(desc =>{
+        bleCharacteristic.getDescriptors().then(descs =>{
 
+            let descType = descs.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEPropTypeUUID);           
+
+            if(descType == null){
+                console.log("No type descriptor found.")
+                resolve(-1);
+            }
+            //console.log(descs);
             // Get the value of the type descriptor
-            desc.readValue().then(value =>{
+            descType.readValue().then(value =>{
 
                 let attributes = value.getUint32(0,true);
                 let order = attributes >> 8 & 0xFF;
@@ -964,6 +976,7 @@ function addPropertyToSystem(bleCharacteristic){
                 let property = new propFactory[type-1](bleCharacteristic);   
 
                 property.order = order;
+                property.descriptors = descs;
                 currentProperties.push(property);
 
                 resolve(0);
@@ -1081,7 +1094,7 @@ function connectToBLEService() {
                     }
                     Promise.all(promises).then((results)=>{
                         renderProperties(); // build and display prop UX
-                        endConnecting(true);
+                        
                     });
 
                 }).catch(error => {
@@ -1127,7 +1140,7 @@ window.onload = function(){
     setDeviceName(kTargetServiceName);
 
 }
-	
+
 </script>
 
 </body>
