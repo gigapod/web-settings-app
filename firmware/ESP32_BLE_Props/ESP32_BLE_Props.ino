@@ -95,19 +95,6 @@ class MyServerCallbacks: public BLEServerCallbacks {
     }
 };
 
-//4 bytes come in but they are little endian. Flip them around.
-//Convert a std string to a int
-int32_t stringToValue(std::string myString)
-{
-  int newValue = 0;
-  for (int i = myString.length() ; i > 0 ; i--)
-  {
-    newValue <<= 8;
-    newValue |= (myString[i - 1]);
-  }
-
-  return (newValue);
-}
 //-------------------------------------------------------------------------
 // Characteristic Setup Section
 //-------------------------------------------------------------------------
