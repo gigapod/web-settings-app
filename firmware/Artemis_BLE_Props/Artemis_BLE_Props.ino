@@ -44,25 +44,32 @@ BLEService bleService(kTargetServiceUUID);
 
 // Define the BLE Service Characteristics - or "Properties"
 //
-// Note - for each characterisitic, a storage value is defined for it
+// Note - for each characterisitic, a storage value is also defined for it
 //
 // >> Notifications <<
 //    Only enable for those characteristics that will use notifications. Adding this type
 //    to a Characteristic adds a BLE Descriptor. If not using notify, save the resources.
-
+//
+//---------------------------------------------------------------------------
 // First Characteristic - "Enabled" - bool - is the system enabled 
 boolean bIsEnabled = true;
 BLEBooleanCharacteristic bleCharEnabled(kCharacteristicEnabledUUID, BLERead | BLEWrite);
 
+
+//---------------------------------------------------------------------------
 // Second Characteristic - Baud Rate - int - the baud rate of the syste
 int32_t baudRate = 115200;
 BLEIntCharacteristic bleCharBaudRate(kCharacteristicBaudUUID, BLERead | BLEWrite);
 
+
+//---------------------------------------------------------------------------
 // Third Characteristic - Device Name - string - a string Name for the device
 String strName = "Artimis Device";
 // Note: Setting max value size of kMessage Max  
 BLEStringCharacteristic bleCharName(kCharacteristicMessageUUID, BLERead | BLEWrite, kMessageMax);
 
+
+//---------------------------------------------------------------------------
 // Fourth Characteristic - Sample Rate - Range (int) - how often to sample this thing
 uint32_t sampleRate = 123;
 
@@ -71,24 +78,49 @@ const uint32_t sampleRateMax = 240;
 
 BLEIntCharacteristic bleCharSampleRate(kCharacteristicSampleUUID, BLERead | BLEWrite);
 
+
+//---------------------------------------------------------------------------
 // Fifth Characteristic - Date - date type - a date string of format "YYYY-MM-DD"
 String strDate = "2021-03-01";
 BLEStringCharacteristic bleCharDate(kCharacteristicDateUUID, BLERead | BLEWrite, kMessageMax);
 
+
+//---------------------------------------------------------------------------
 // Sixth Characteristic - Time - time type - a time string of format "HH:MM"
 String strTime = "12:13";
 BLEStringCharacteristic bleCharTime(kCharacteristicTimeUUID, BLERead | BLEWrite, kMessageMax);
 
+
+//---------------------------------------------------------------------------
 // Seventh Characteristic -Offset - Float type - the offset value.
 //
 // This value has Notifications enabled.
 // A float property - "offset value"
 float offsetValue = 4.124;
-
 BLEFloatCharacteristic bleCharOffset(kCharacteristicOffsetUUID, BLERead | BLENotify | BLEWrite);
 
+
 //--------------- end object setup ------------------------
+// We're using the Enable property to control the on-board LED...
 const byte LED_TO_TOGGLE = 19;
+
+//--------------------------------------------------------------------------------------
+// Operational State
+//--------------------------------------------------------------------------------------
+// Value used to manage timing for a Notification example in loop.
+unsigned long ticks;
+
+// >> Work Timeout <<
+// On BLE connect from the settings app client, the BLE system needs resources to process
+// the various descriptor requests from the client app. Any additional work being 
+// performed in loop() can impact the BLE systems performance.
+//
+// To provide a "work" pause on connect, a "on connection" event is determined, 
+// and a work "timeout" is implemented for N seconds. 
+//  
+// Define work timeout in MS. 
+const unsigned int bleOnConnectDelay = 2000;  // ms  on BLE connection "work" timeout
+
 
 //--------------------------------------------------------------------------------------
 // Property changed callback functions.
@@ -96,11 +128,14 @@ const byte LED_TO_TOGGLE = 19;
 // These functions are connected to their respective characteristics and are called
 // when the underlying value is changed.
 //
+// These functions provide examples of accessing different data types from a
+// Characteristic
+//
 // The function signature is defined by Arduino BLE
-
+//---------------------------------------------------------------------------
 void enbabledUpdateCB(BLEDevice central, BLECharacteristic theChar){
 
-    Serial.print("Is Enabled Update: ");
+    Serial.print("Enabled Update: ");
     uint8_t newValue;
     theChar.readValue(newValue); // no readValue for bools
     bIsEnabled = (boolean)newValue;
@@ -108,6 +143,8 @@ void enbabledUpdateCB(BLEDevice central, BLECharacteristic theChar){
 
     digitalWrite(LED_BUILTIN, (bIsEnabled ? HIGH : LOW));
 }
+
+//---------------------------------------------------------------------------
 void buadRateUpdateCB(BLEDevice central, BLECharacteristic theChar){
 
     Serial.print("Baud Rate Update: ");
@@ -115,6 +152,7 @@ void buadRateUpdateCB(BLEDevice central, BLECharacteristic theChar){
     Serial.println(baudRate);
 }
 
+//---------------------------------------------------------------------------
 void nameUpdateCB(BLEDevice central, BLECharacteristic theChar){
 
     char buffer[kMessageMax+1]={0}; // buffer size + null - zero out 
@@ -126,6 +164,8 @@ void nameUpdateCB(BLEDevice central, BLECharacteristic theChar){
     Serial.print("Device Name Update: ");
     Serial.println(strName);;
 }
+
+//---------------------------------------------------------------------------
 void sampleRateUpdateCB(BLEDevice central, BLECharacteristic theChar){
 
     Serial.print("Sample Rate Update: ");
@@ -133,6 +173,7 @@ void sampleRateUpdateCB(BLEDevice central, BLECharacteristic theChar){
     Serial.println(sampleRate);
 }
 
+//---------------------------------------------------------------------------
 void dateUpdateCB(BLEDevice central, BLECharacteristic theChar){
 
     char buffer[kMessageMax+1]={0}; // buffer size + null - zero out 
@@ -145,6 +186,7 @@ void dateUpdateCB(BLEDevice central, BLECharacteristic theChar){
     Serial.println(strDate);
 }
 
+//---------------------------------------------------------------------------
 void timeUpdateCB(BLEDevice central, BLECharacteristic theChar){
 
     char buffer[kMessageMax+1]={0}; // buffer size + null - zero out 
@@ -157,6 +199,7 @@ void timeUpdateCB(BLEDevice central, BLECharacteristic theChar){
     Serial.println(strTime);
 }
 
+//---------------------------------------------------------------------------
 void offsetUpdateCB(BLEDevice central, BLECharacteristic theChar){
 
     Serial.print("Offset (float) Update: ");
@@ -244,12 +287,13 @@ void setupBLECharacteristics(BLEService& theService){
 
 }
 //-------------------------------------------------------------------------
-// A BLE client (device) is connected logic.
+// A BLE client  is connected logic.
 //-------------------------------------------------------------------------
 //
 // The system is setup to call callback methods to the below object. 
 // A bool is used to keep track of connected state..
 bool deviceConnected = false;
+
 // General Connect callbacks
 void blePeripheralConnectHandler(BLEDevice central) {
   // central connected event handler
@@ -264,8 +308,7 @@ void blePeripheralDisconnectHandler(BLEDevice central) {
   Serial.println(central.address());
   deviceConnected = false;  
 }
-// Value used to manage timing for a Notification example in loop.
-unsigned long ticks;
+
 
 //---------------------------------------------------------------------------------
 // Setup our system
@@ -307,6 +350,34 @@ void setup() {
     Serial.println(F("OLA BLE ready for connections!"));
 }
 
+//-----------------------------------------------------------------------------------
+// function to determine if work should pause while a new BLE Connection initializes
+//
+// Returns true if work should be performed. 
+bool doWork(){
+    
+    // vars to keep track of state. Make static to live across function calls
+    static unsigned int bleTicks =0;
+    static bool wasConnected = false;
+
+    // did we just connect? If so, give the BLE system most of our loop resouces
+    // to manage the connection startup
+    if(!wasConnected && deviceConnected){ // connection state change
+        bleTicks = millis();
+        Serial.println("start work delay");
+    }
+    // Did the device disconnect or are we at the dnd the work timeout?
+    if(bleTicks && millis()-bleTicks > bleOnConnectDelay){
+        bleTicks = 0;
+        Serial.println("end work delay");
+    }
+    wasConnected = deviceConnected;
+    
+    // do work if ticks equals 0.
+    return bleTicks == 0;
+
+}
+//-----------------------------------------------------------------------------------
 void loop()
 {
     // >> Update and Notification Example <<
@@ -319,10 +390,18 @@ void loop()
         // Should trigger a notification on client
         offsetValue += .5;
         if(deviceConnected){
-            bleCharOffset.setValue(offsetValue);
+            bleCharOffset.setValue(offsetValue); // triggers notify message b/c char created w/ BLENotify
             Serial.print("Incrementing Offset to: "); Serial.println(offsetValue);
         }
         ticks = millis();
+    }
+    
+    // Do work, or pause work to give most resources to the BLE system on client connection initialization
+    if(doWork()){
+        ////////////////////////////
+        // >> DO LOOP WORK HERE <<
+        ///////////////////////////
+        delay(200);    // *WORK*
     }
 
     // Pump the BLE service - everything is handled in callbacks.
