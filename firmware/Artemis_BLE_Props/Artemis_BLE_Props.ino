@@ -366,13 +366,13 @@ bool doWork(){
         bleTicks = millis();
         Serial.println("start work delay");
     }
-    // Did the device disconnect or are we at the dnd the work timeout?
+    // Are we at the end the work timeout?
     if(bleTicks && millis()-bleTicks > bleOnConnectDelay){
         bleTicks = 0;
         Serial.println("end work delay");
     }
     wasConnected = deviceConnected;
-    
+
     // do work if ticks equals 0.
     return bleTicks == 0;
 
