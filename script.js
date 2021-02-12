@@ -52,7 +52,9 @@ function setDeviceName(name){
     deviceName = name;
     document.getElementById("settings-title").innerHTML= name+ " Settings";
 }
+// DEBUG
 
+let debugLoadTime=0;
 //---------------------------------------
 // property things
 //---------------------------------------
@@ -637,7 +639,7 @@ function startConnecting(){
     button.innerHTML ="Connecting to " + deviceName + '...';
     button.style.fontStyle='italic';
     button.disabled=true;
-    button.style.cursor = "not-allowed";       
+    button.style.cursor = "not-allowed";  
 
 }
 function endConnecting(success){ 
@@ -653,6 +655,7 @@ function endConnecting(success){
     }else{
         onDisconnected();
     }
+    console.log("Properties Load Time:", Date.now()-debugLoadTime);
 }
 function connectToBLEService() {
 
@@ -673,7 +676,9 @@ function connectToBLEService() {
     options.filters = filters;
     startConnecting();
     return navigator.bluetooth.requestDevice(options).then(device => {
-        
+
+        debugLoadTime=Date.now(); // time the loading of the settings parameters ...
+
         if(device.name)
             setDeviceName(device.name);
 
