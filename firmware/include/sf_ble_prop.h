@@ -19,13 +19,6 @@
 // Characteritics. This file simplifies / automatets setting this up. 
 //
 
-// TODO for Sort Order
-//   - create a static counter =0
-//   - Move type desc, to attribute descp
-//   - new a uint 16 for the attribut descp storage
-//   - lower byte = type, upper byte order count - the current vlaue of counter, then inc counter
-//   - Update UX to look at attribute byte. 
-//  
 // BLE UUID Codes for our Protocol Descriptors 
 #define kBLEDescCharNameUUID            "A100"
 #define kBLEDescSFEPropTypeUUID         "A101"
@@ -44,6 +37,7 @@
  uint8_t kSFEPropTypeFloat     = 0x7;
 
 //-------------------------------------------------------------------------
+// Sort order counter -- Add order == Sort order
 static uint8_t sort_pos=0;  // if there are over 256 props, this system has bigger issues
 
 //-------------------------------------------------------------------------
@@ -59,6 +53,7 @@ typedef BLECharacteristic* sfe_bleprop_charc_t;
 #else
 //-------------------------------------------------------------------------
 // ArduinoBLE DEFS
+//
 // ArduinoBLE likes it's const
 
 #define sfe_ble_const const
@@ -108,7 +103,6 @@ void _sf_bleprop_core(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName,
 
 void sf_bleprop_range(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName,  
 					  sfe_ble_const uint32_t& vMin, sfe_ble_const uint32_t& vMax){
-
 
     _sf_bleprop_core(bleChar, strName, kSFEPropTypeRange);
 
