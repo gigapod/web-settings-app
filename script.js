@@ -17,10 +17,8 @@ console.clear();
 //--------------------------------------------------------------------------------------
 
 // BLE Codes for our service
-const kBLEDescCharNameUUID = 0xA100;
-const kBLEDescSFEPropTypeUUID = 0xA101;
-const kBLEDescSFEPropRangeMinUUID = 0xA110;
-const kBLEDescSFEPropRangeMaxUUID = 0xA111;
+const kBLEDescSFEPropCoreUUID = 0xA101;
+const kBLEDescSFEPropRangeLimitsUUID = 0xA110;
 const kBLEDescSFEGroupTitleUUID = 0xA112;
 
 // Property type codes - sent as a value of the char descriptor 
@@ -64,8 +62,9 @@ let namecnt = 0;
 // Base property class 
 class Property{
 
-    constructor(bleChar){
+    constructor(bleChar, name){
       	this.characteristic = bleChar;
+        this.name = name;
     	this.ID = "property-" + namecnt++;  // unique id for the DOM
         this.div = null;
         this.timer=-1;
@@ -75,12 +74,12 @@ class Property{
     init(){
 
         // For now - enable notifications on all values ...
-       this.enableNotifications();
-
+        this.enableNotifications();
+            
+        // check for group title
+        let descgrp = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEGroupTitleUUID);
         return new Promise( (resolve) => {
 
-            // check for group title
-            let descgrp = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEGroupTitleUUID);
             if(descgrp){
                 descgrp.readValue().then(value =>{
                     // decode name, set in instance data
@@ -91,34 +90,20 @@ class Property{
                         this.group.innerHTML = ` <h2 class="title">`+ grpName + `</h2>`;  
                         document.getElementById(targetID).appendChild(this.group);
                     }
+                    resolve(0);
                 });
-            }
-
-            // get the name of this prop
-            let descName = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescCharNameUUID);
-            
-            if(descName == null){
-                console.log("Error getting property name value");
-                resolve(-1);
-            }
-            descName.readValue().then(value =>{
-                // decode name, set in instance data
-                this.name = dataToText(value);
-
-                // We have the name - call method to generate UX and complete setup
-                this.generateElement();
+            }else{
                 resolve(0);
+            }
 
-            }).catch(error => {
-                console.log(error);
-                resolve(-1);
-            });
-
+        // Once the name is resolved, if we have a name, generate the property UX.
+        // By waiting, we ensure title rendered before the element            
+        }).then(_ =>{
+            this.generateElement();
         });
 
     }
 
-    
     updateValue(value){}
     update(){
         this.characteristic.readValue().then( value =>{
@@ -201,34 +186,22 @@ class rangeProperty extends Property{
             // Get Min and Max of Range
             this.min =0;
             this.max=100;
-            let descMin = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEPropRangeMinUUID); 
+            let descMin = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEPropRangeLimitsUUID); 
             if(descMin == null ){
                 console.log("No min value for range property");
                 resolve(-1);
             }                      
             descMin.readValue().then(value =>{
                 this.min = value.getInt32(0,true);
-            }).catch(error => {
-                console.log("Get range property Min failed" + error);
-            });
-
-            let descMax = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEPropRangeMaxUUID); 
-            if(descMax == null ){
-                console.log("No max value for range property. Setting to 100");
-                resolve(-1);
-            }                      
-            descMax.readValue().then(value =>{
-                this.max = value.getInt32(0, true);
+                this.max = value.getInt32(4, true);
 
                 // TODO THIS NEEDS WORK
                 // Call super - finish setup
                 super.init().then(results =>{
                     resolve(0);
                 });
-
             }).catch(error => {
-                console.log("Get range property Max failed" + error);
-                resolve(-1);
+                console.log("Get range property limits failed" + error);
             });
 
         });
@@ -515,7 +488,7 @@ function deleteProperties(){
 function showProperties(){ 
 
     if(currentProperties.length > 0){
-        document.getElementById(targetID).style.display="flex"; 
+       document.getElementById(targetID).style.display="flex"; 
     }
 }
 
@@ -560,7 +533,7 @@ function addPropertyToSystem(bleCharacteristic){
         // Get the type descriptor
         bleCharacteristic.getDescriptors().then(descs =>{
 
-            let descType = descs.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEPropTypeUUID);           
+            let descType = descs.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEPropCoreUUID);           
 
             if(descType == null){
                 console.log("No type descriptor found.")
@@ -578,18 +551,23 @@ function addPropertyToSystem(bleCharacteristic){
                     console.log("Invalid Type value: " + type);
                     resolve(1);
                 }
+
+                // get name
+                let name = dataToText(new DataView(value.buffer, 4));
                 // build prop object - notice index into array of prop class defs 
-                let property = new propFactory[type-1](bleCharacteristic);   
+                let property = new propFactory[type-1](bleCharacteristic, name);   
 
                 property.order = order;
                 property.descriptors = descs;
                 currentProperties.push(property);
 
                 resolve(0);
+            }).catch(error => {
+                console.log("readValue error: ", error);
+                resolve(1);
             });
         }).catch(error => {
-            console.log("getDescriptor - property type failed");
-            console.log(error);
+            console.log("getDescriptor - property type failed", error);
             resolve(1);
         });
     });

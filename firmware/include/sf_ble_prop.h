@@ -15,15 +15,13 @@
 // BLE Setttings Web App. 
 //--------------------------------------------------------------------------------------
 //
+#define kSFBLEBufferSize 64
 // The settings app defines a type protocol based on BLE Descriptors added to
 // Characteritics. This file simplifies / automatets setting this up. 
-//
-
+//  
 // BLE UUID Codes for our Protocol Descriptors 
-#define kBLEDescCharNameUUID            "A100"
-#define kBLEDescSFEPropTypeUUID         "A101"
-#define kBLEDescSFEPropRangeMinUUID     "A110"
-#define kBLEDescSFEPropRangeMaxUUID     "A111"
+#define kBLEDescSFEPropCoreUUID         "A101"
+#define kBLEDescSFEPropRangeLimitsUUID  "A110"
 #define kBLEDescSFEGroupTitleUUID       "A112"
 
 
@@ -37,7 +35,6 @@
  uint8_t kSFEPropTypeFloat     = 0x7;
 
 //-------------------------------------------------------------------------
-// Sort order counter -- Add order == Sort order
 static uint8_t sort_pos=0;  // if there are over 256 props, this system has bigger issues
 
 //-------------------------------------------------------------------------
@@ -53,7 +50,6 @@ typedef BLECharacteristic* sfe_bleprop_charc_t;
 #else
 //-------------------------------------------------------------------------
 // ArduinoBLE DEFS
-//
 // ArduinoBLE likes it's const
 
 #define sfe_ble_const const
@@ -80,16 +76,24 @@ void _sf_bleprop_add_desc(sfe_bleprop_charc_t bleChar, const char* uuid, sfe_ble
 //-------------------------------------------------------------------------
 void _sf_bleprop_core(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName, sfe_ble_const uint8_t& propType){
 
-    _sf_bleprop_add_desc(bleChar, kBLEDescCharNameUUID, (sfe_ble_const uint8_t*)strName, strlen(strName));
 
-    // Setup our attribute mask field. 32 bits for the future. Alloc b/c some BLE systems
-    // need it's own memory for value fields.
-    //
-    // Layout MSB to LSB
-    //  [TBD][TBD][ORDER][TYPE]
-    uint32_t * attr = new uint32_t;
-    *attr = (sort_pos++ << 8 ) | propType; // notice inc on order position
-    _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropTypeUUID, (sfe_ble_const uint8_t*)attr, sizeof(uint32_t));    
+	// Encode the type, attributesd and name into a buffer. Then only use one 
+	// descriptor (and descriptr transaction).
+    // buffer layout
+    // [type][sort][free][free][Name...][null]
+    
+	int nName = strlen(strName);
+	nName = nName > kSFBLEBufferSize ? kSFBLEBufferSize : nName;
+	int nData = sizeof(uint32_t) + nName + 1;
+	uint8_t * pData = new uint8_t[nData];
+	memset((void*)pData, '\0', nData);
+
+	pData[0] = propType;
+	pData[1] = sort_pos++;  // NOTE: increment
+
+	strlcpy((char*)(pData+sizeof(uint32_t)), strName, nName+1);
+
+    _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropCoreUUID, (sfe_ble_const uint8_t*)pData, nData);  
 
 }
 
@@ -104,17 +108,18 @@ void _sf_bleprop_core(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName,
 void sf_bleprop_range(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName,  
 					  sfe_ble_const uint32_t& vMin, sfe_ble_const uint32_t& vMax){
 
+
     _sf_bleprop_core(bleChar, strName, kSFEPropTypeRange);
 
     // Descriptor values must be persistant, not stack-based. Expect users not to care/know,
     // so alloc copies..
-    uint32_t * pMin = new uint32_t;
-    uint32_t * pMax = new uint32_t;    
+    uint32_t * pValue = new uint32_t[2];    
 
-    *pMin = vMin;
-    *pMax = vMax;
-    _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropRangeMinUUID, ( uint8_t*)pMin, sizeof(uint32_t));    
-    _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropRangeMaxUUID, ( uint8_t*)pMax, sizeof(uint32_t));        
+    if(!pValue)
+    	return;
+    pValue[0] = vMin;
+    pValue[1] = vMax;
+    _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropRangeLimitsUUID, ( uint8_t*)pValue, sizeof(uint32_t)*2);    
 
 }
 
