@@ -77,11 +77,10 @@ class Property{
         this.enableNotifications();
             
         // check for group title
-        let descgrp = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEGroupTitleUUID);
         return new Promise( (resolve) => {
 
-            if(descgrp){
-                descgrp.readValue().then(value =>{
+            this.characteristic.getDescriptor(kBLEDescSFEGroupTitleUUID).then(descgrp => {
+                 descgrp.readValue().then(value =>{
                     // decode name, set in instance data
                     let grpName= dataToText(value);
                     if(grpName.length > 2){
@@ -91,15 +90,21 @@ class Property{
                         document.getElementById(targetID).appendChild(this.group);
                     }
                     resolve(0);
+                }).catch(error => {
+                    console.log("Goup Title Value: ", error);
+                    resolve(0);// keep moving on
                 });
-            }else{
+            }).catch(error => {
+                // no title descp
                 resolve(0);
-            }
+            });
 
         // Once the name is resolved, if we have a name, generate the property UX.
         // By waiting, we ensure title rendered before the element            
         }).then(_ =>{
             this.generateElement();
+        }).catch(error => {
+            console.log("Error setting up property: ", this.name);
         });
 
     }
@@ -186,17 +191,14 @@ class rangeProperty extends Property{
             // Get Min and Max of Range
             this.min =0;
             this.max=100;
-            let descMin = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEPropRangeLimitsUUID); 
-            if(descMin == null ){
-                console.log("No min value for range property");
-                resolve(-1);
-            }                      
-            descMin.readValue().then(value =>{
-                this.min = value.getInt32(0,true);
-                this.max = value.getInt32(4, true);
+            this.characteristic.getDescriptor(kBLEDescSFEPropRangeLimitsUUID).then( descLimits => {
 
-                // TODO THIS NEEDS WORK
-                // Call super - finish setup
+                descLimits.readValue().then(value =>{
+                    this.min = value.getInt32(0,true);
+                    this.max = value.getInt32(4, true);
+                });
+
+            }).finally(_=>{
                 super.init().then(results =>{
                     resolve(0);
                 });
@@ -205,6 +207,14 @@ class rangeProperty extends Property{
             });
 
         });
+    }
+    _updateUX(value){
+        //set text
+        this.txtValue.setAttribute("data-length", ' ' + value);
+        // set gutter color - 
+        const percentage = (100 * (value - this.input.min)) / (this.input.max - this.input.min);
+        const bg = `linear-gradient(90deg, ${range_fill} ${percentage}%, ${range_background} ${percentage + 0.1}%)`;
+        this.input.style.background = bg;
     }
     //------------------------
    	generateElement(){
@@ -223,12 +233,7 @@ class rangeProperty extends Property{
    			
    		// Update slider values - event handler
    		this.input.addEventListener("input", event => {
-   			//set text
-			this.txtValue.setAttribute("data-length", ' '+event.target.value);
-			// set gutter color - 
-			const percentage = (100 * (this.input.value - this.input.min)) / (this.input.max - this.input.min);
-			const bg = `linear-gradient(90deg, ${range_fill} ${percentage}%, ${range_background} ${percentage + 0.1}%)`;
-			this.input.style.background = bg;
+            this._updateUX(event.target.value);
 		});
 
    		// On change, set the underlying value
@@ -241,8 +246,8 @@ class rangeProperty extends Property{
 
     updateValue(value){
         this.input.value = value.getInt32(0, true);
-        // send an event to the thing to trigger ui update
-        this.input.dispatchEvent(new Event('input'));
+        this._updateUX(this.input.value);
+
     }
 
     saveValue(){
@@ -530,10 +535,8 @@ function addPropertyToSystem(bleCharacteristic){
     // use a promise to encapsualte this add - might be overkill ... but 
     // with a lot of props ...
     return new Promise( (resolve) => {
-        // Get the type descriptor
-        bleCharacteristic.getDescriptors().then(descs =>{
-
-            let descType = descs.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEPropCoreUUID);           
+        // Get the core descriptor
+        bleCharacteristic.getDescriptor(kBLEDescSFEPropCoreUUID).then(descType =>{
 
             if(descType == null){
                 console.log("No type descriptor found.")
@@ -558,7 +561,7 @@ function addPropertyToSystem(bleCharacteristic){
                 let property = new propFactory[type-1](bleCharacteristic, name);   
 
                 property.order = order;
-                property.descriptors = descs;
+                //property.descriptors = descs;
                 currentProperties.push(property);
 
                 resolve(0);
