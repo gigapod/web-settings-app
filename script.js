@@ -552,7 +552,6 @@ function compairPropOrder(a, b){
 async function renderProperties(){
 
     // first sort our props so they display as desired
-    progress_add_value(5);
     currentProperties.sort(compairPropOrder);
 
     // build the UX for each property - want this is order -- so wait 
@@ -737,7 +736,7 @@ function connectToBLEService() {
                         promises.push(addPropertyToSystem(aChar));
                     }
                     progress_add_value(5);
-                    progressInc = 40./theCharacteristics.length; // for updates in promises
+                    progressInc = 50./theCharacteristics.length; // for updates in promises
                     Promise.all(promises).then((results)=>{
                         renderProperties(); // build and display prop UX
                         
