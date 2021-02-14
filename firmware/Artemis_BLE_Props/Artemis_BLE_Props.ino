@@ -235,52 +235,44 @@ void offsetUpdateCB(BLEDevice central, BLECharacteristic theChar){
 void setupBLECharacteristics(BLEService& theService){
 
     // The enabled char
-    sf_bleprop_bool(bleCharEnabled, "Device Enabled"); // setup property descriptor
+    sf_bleprop_bool(bleCharEnabled, "Device Enabled", nullptr); // setup property descriptor
     theService.addCharacteristic(bleCharEnabled);  
     bleCharEnabled.setValue(bIsEnabled);
     bleCharEnabled.setEventHandler(BLEWritten, enbabledUpdateCB);
 
-    // Add Event Details group title to this char
-    sf_bleprop_group_title(bleCharDate, "Event Details");    
-
-    // The date char
-    sf_bleprop_date(bleCharDate, "Start Date"); // setup property descriptor            
+    // The date char with title
+    sf_bleprop_date(bleCharDate, "Start Date", "Event Details"); // setup property descriptor            
     theService.addCharacteristic(bleCharDate);  
     bleCharDate.setValue(strDate);
     bleCharDate.setEventHandler(BLEWritten, dateUpdateCB); 
 
     // The time char
-    sf_bleprop_time(bleCharTime, "Start Time"); // setup property descriptor                
+    sf_bleprop_time(bleCharTime, "Start Time", nullptr); // setup property descriptor                
     theService.addCharacteristic(bleCharTime);  
     bleCharTime.setValue(strTime);
     bleCharTime.setEventHandler(BLEWritten, timeUpdateCB);  
 
-    // Add Device Settings group title to this char
-    sf_bleprop_group_title(bleCharBaudRate, "Device Settings");  
 
-    // The BaudRate char
-    sf_bleprop_int(bleCharBaudRate, "Baud Rate"); // setup property descriptor    
+    // The BaudRate char with title
+    sf_bleprop_int(bleCharBaudRate, "Baud Rate", "Device Settings"); // setup property descriptor    
     theService.addCharacteristic(bleCharBaudRate);  
     bleCharBaudRate.setValue(baudRate);
     bleCharBaudRate.setEventHandler(BLEWritten, buadRateUpdateCB);
 
     // The Name char
-    sf_bleprop_string(bleCharName, "Device Name"); // setup property descriptor        
+    sf_bleprop_string(bleCharName, "Device Name", nullptr); // setup property descriptor        
     theService.addCharacteristic(bleCharName);  
     bleCharName.setValue(strName);
     bleCharName.setEventHandler(BLEWritten, nameUpdateCB);    
         
-
-    // Add Sensor Settings group title to this char
-    sf_bleprop_group_title(bleCharSampleRate, "Sensor Settings");  
-    // The Sample Rate char
-    sf_bleprop_range(bleCharSampleRate, "Sample Rate (sec)", sampleRateMin, sampleRateMax); // setup property descriptor            
+    // The Sample Rate char with title
+    sf_bleprop_range(bleCharSampleRate, "Sample Rate (sec)", sampleRateMin, sampleRateMax, "Sensor Settings"); // setup property descriptor            
     theService.addCharacteristic(bleCharSampleRate);
     bleCharSampleRate.setValue(sampleRate);     
     bleCharSampleRate.setEventHandler(BLEWritten, sampleRateUpdateCB);             
 
     // The Offset (float) char
-    sf_bleprop_float(bleCharOffset, "Offset Bias"); // setup property descriptor                    
+    sf_bleprop_float(bleCharOffset, "Offset Bias", nullptr); // setup property descriptor                    
     theService.addCharacteristic(bleCharOffset);  
     bleCharOffset.setValue(offsetValue);
     bleCharOffset.setEventHandler(BLEWritten, offsetUpdateCB);  

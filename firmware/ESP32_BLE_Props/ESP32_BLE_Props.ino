@@ -368,7 +368,7 @@ void setup() {
 
     // Event Details Group
     pChar = setupDateCharacteristic(pService);
-    sf_bleprop_int(pChar, "Start Date", "Event Details");
+    sf_bleprop_date(pChar, "Start Date", "Event Details");
 
     pChar = setupTimeCharacteristic(pService); 
     sf_bleprop_time(pChar, "Start Time", nullptr);
