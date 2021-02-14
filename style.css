@@ -136,7 +136,7 @@ button {
   position: relative;
   height: auto;
   widows: 100%;
-  display: none;
+  display: flex;
   flex-direction: column;
 }
 .settings .setting {
