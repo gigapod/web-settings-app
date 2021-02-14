@@ -129,7 +129,7 @@ size_t _sf_bleprop_core(uint8_t *pBuffer, size_t iNext, sfe_ble_const char *strN
 }
 
 //-------------------------------------------------------------------------
-void _sf_bleprop_basic(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName, sfe_ble_const uint8_t& propType,
+void _sf_bleprop_basic(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName, uint8_t& propType,
                         sfe_ble_const char *strTitle){
 
     uint8_t dBuffer[kSFBLEBufferSize] = {0};
@@ -144,7 +144,7 @@ void _sf_bleprop_basic(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName
         dBuffer[iNext++] = kBlkTitle;
         iNext = _add_string(dBuffer, iNext, strTitle, nTitle );
     }
-    _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropCoreUUID, (sfe_ble_const uint8_t*)dBuffer, iNext);  
+    _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropCoreUUID, dBuffer, iNext);  
 
 }
 //-------------------------------------------------------------------------
@@ -186,13 +186,8 @@ void sf_bleprop_range(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName,
 
     iNext += sizeof(range);
 
-    _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropCoreUUID, (sfe_ble_const uint8_t*)dBuffer, iNext);      
+    _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropCoreUUID, dBuffer, iNext);      
 
-}
-
-void sf_bleprop_group_title(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strGroup){
-
-    _sf_bleprop_add_desc(bleChar, kBLEDescSFEGroupTitleUUID, ( uint8_t*)strGroup, strlen(strGroup));        
 }
 
 
