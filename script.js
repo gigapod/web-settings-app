@@ -547,22 +547,19 @@ function compairPropOrder(a, b){
 async function renderProperties(){
 
     // first sort our props so they display as desired
+    progress_set_value(70);
     currentProperties.sort(compairPropOrder);
 
     // build the UX for each property - want this is order -- so wait 
+    progress_set_value(80);
 
-    let inc = 30./currentProperties.length;
-    let i = 65;
     for(const aProp of currentProperties){
         let result = await aProp.init();
-        i += inc;
-        progress_set_value(i);
     }
     progress_set_value(100);
     showProperties();
     endConnecting(true);
-    // still found the UX isn't all there yet ... wait a cycle or 2
-//    setTimeout(function(){showProperties();}, 100);
+
 }
 //--------------------------------------------------------------------------------------
 // Add a property to the system based on a BLE Characteristic
@@ -732,13 +729,10 @@ function connectToBLEService() {
                     // The adds are async - so use promises and then
                     // once everything is added, show the props UX all at once.
                     const promises=[];
-                    let inc = 15./theCharacteristics.length;
-                    let i = 50;
                     for(const aChar of theCharacteristics){
                         promises.push(addPropertyToSystem(aChar));
-                        i += inc;
-                        progress_set_value(i);
                     }
+                    progress_set_value(65);
                     Promise.all(promises).then((results)=>{
                         renderProperties(); // build and display prop UX
                         
