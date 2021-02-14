@@ -4,8 +4,8 @@
 	<meta charset="UTF-8">
   	<title>SparkFun BLE Settings App</title>
 
-<style type="text/css">
-	* {
+ <style type="text/css">
+ 	* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -384,7 +384,7 @@ a:hover {
   height: 3px;
   background-color: green;
 }
-</style>
+ </style>
  	<!-- Add some branding -->
 	<a class="sparkfun-corner" href="https://sparkfun.com" title="SparkFun Electronics" target="_blank">
 	<svg width="80" height="80" viewbox="0 0 80 80">
@@ -465,10 +465,15 @@ function setDeviceName(name){
 let debugLoadTime=0;
 
 // progress bar
-
+let progressInc = 1;
 function progress_set_value(value){
-
     document.getElementById("myBar").style.width=value + "%";
+
+}
+function progress_add_value(value){
+
+   let element =  document.getElementById("myBar");
+   element.style.width = (parseInt(element.style.width)+value) + "%";
 
 }
 function progress_start(){
@@ -959,16 +964,15 @@ async function renderProperties(){
     // first sort our props so they display as desired
     currentProperties.sort(compairPropOrder);
 
-    progress_set_value(90);
     // build the UX for each property - want this is order -- so wait 
+
     for(const aProp of currentProperties){
         let result = await aProp.init();
     }
     progress_set_value(100);
     showProperties();
     endConnecting(true);
-    // still found the UX isn't all there yet ... wait a cycle or 2
-//    setTimeout(function(){showProperties();}, 100);
+
 }
 //--------------------------------------------------------------------------------------
 // Add a property to the system based on a BLE Characteristic
@@ -1016,7 +1020,7 @@ function addPropertyToSystem(bleCharacteristic){
                     iPos = property.processBlk(blkType, value , iPos);
                 }
                 currentProperties.push(property);
-
+                progress_add_value(progressInc);
                 resolve(0);
             }).catch(error => {
                 console.log("readValue error: ", error);
@@ -1125,12 +1129,12 @@ function connectToBLEService() {
         return device.gatt.connect().then(gattServer => {
             
             bleConnected(gattServer);
-            progress_set_value(25);            
+            progress_add_value(15);            
 
             // Connect to our target Service 
             gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
 
-                progress_set_value(60);
+                progress_add_value(20);
                 // Now get all the characteristics for this service
                 primaryService.getCharacteristics().then(theCharacteristics => {                
 
@@ -1138,13 +1142,11 @@ function connectToBLEService() {
                     // The adds are async - so use promises and then
                     // once everything is added, show the props UX all at once.
                     const promises=[];
-                    let inc = 25./theCharacteristics.length;
-                    let i = 60;
                     for(const aChar of theCharacteristics){
                         promises.push(addPropertyToSystem(aChar));
-                        i += inc;
-                        progress_set_value(i);
                     }
+                    progress_add_value(5);
+                    progressInc = 50./theCharacteristics.length; // for updates in promises
                     Promise.all(promises).then((results)=>{
                         renderProperties(); // build and display prop UX
                         
