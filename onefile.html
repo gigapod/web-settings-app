@@ -143,7 +143,7 @@ button {
   position: relative;
   height: auto;
   widows: 100%;
-  display: none;
+  display: flex;
   flex-direction: column;
 }
 .settings .setting {
@@ -413,10 +413,8 @@ console.clear();
 //--------------------------------------------------------------------------------------
 
 // BLE Codes for our service
-const kBLEDescCharNameUUID = 0xA100;
-const kBLEDescSFEPropTypeUUID = 0xA101;
-const kBLEDescSFEPropRangeMinUUID = 0xA110;
-const kBLEDescSFEPropRangeMaxUUID = 0xA111;
+const kBLEDescSFEPropCoreUUID = 0xA101;
+const kBLEDescSFEPropRangeLimitsUUID = 0xA110;
 const kBLEDescSFEGroupTitleUUID = 0xA112;
 
 // Property type codes - sent as a value of the char descriptor 
@@ -448,35 +446,65 @@ function setDeviceName(name){
     deviceName = name;
     document.getElementById("settings-title").innerHTML= name+ " Settings";
 }
+// DEBUG
 
+let debugLoadTime=0;
 //---------------------------------------
 // property things
 //---------------------------------------
 // Used to main unique ids for property objects
 let namecnt = 0;
 
+const kBlkRange = 0x02;
+const kBlkTitle = 0x01;
+
 // Base property class 
 class Property{
 
-    constructor(bleChar){
+    constructor(bleChar, name, order){
       	this.characteristic = bleChar;
+        this.name = name;
+        this.order = order;
     	this.ID = "property-" + namecnt++;  // unique id for the DOM
         this.div = null;
         this.timer=-1;
         this.group=null;
+        this.title=null;
+
     }
     
+    processBlk(blkType, value, iPos){
+
+
+        if(blkType != kBlkTitle){
+            return iPos;
+        }
+        let len = value.getUint8(iPos++);
+        this.title = dataToText(new DataView(value.buffer, iPos, len));
+        return iPos + len;
+
+    }
     init(){
 
         // For now - enable notifications on all values ...
-       this.enableNotifications();
-
+        this.enableNotifications();
+            
+        // check for group title
+        
         return new Promise( (resolve) => {
 
-            // check for group title
-            let descgrp = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEGroupTitleUUID);
-            if(descgrp){
-                descgrp.readValue().then(value =>{
+            // title?
+            if(this.title != null && this.title.length > 2){
+                this.group= document.createElement("div");
+
+                this.group.innerHTML = ` <h2 class="title">`+ this.title + `</h2>`;  
+                document.getElementById(targetID).appendChild(this.group);
+            }
+            this.generateElement();
+            resolve(0);
+            /*
+            this.characteristic.getDescriptor(kBLEDescSFEGroupTitleUUID).then(descgrp => {
+                 descgrp.readValue().then(value =>{
                     // decode name, set in instance data
                     let grpName= dataToText(value);
                     if(grpName.length > 2){
@@ -485,34 +513,28 @@ class Property{
                         this.group.innerHTML = ` <h2 class="title">`+ grpName + `</h2>`;  
                         document.getElementById(targetID).appendChild(this.group);
                     }
+                    resolve(0);
+                }).catch(error => {
+                    console.log("Goup Title Value: ", error);
+                    resolve(0);// keep moving on
                 });
-            }
-
-            // get the name of this prop
-            let descName = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescCharNameUUID);
-            
-            if(descName == null){
-                console.log("Error getting property name value");
-                resolve(-1);
-            }
-            descName.readValue().then(value =>{
-                // decode name, set in instance data
-                this.name = dataToText(value);
-
-                // We have the name - call method to generate UX and complete setup
-                this.generateElement();
-                resolve(0);
-
             }).catch(error => {
-                console.log(error);
-                resolve(-1);
+                // no title descp
+                resolve(0);
             });
-
+        
+        // Once the name is resolved, if we have a name, generate the property UX.
+        // By waiting, we ensure title rendered before the element            
+        }).then(_ =>{
+            this.generateElement();
+            */
+        }).catch(error => {
+            console.log("Error setting up property: ", this.name);
         });
+        
 
     }
 
-    
     updateValue(value){}
     update(){
         this.characteristic.readValue().then( value =>{
@@ -590,42 +612,24 @@ const range_background = "rgba(255, 255, 255, 0.214)";
 
 class rangeProperty extends Property{
 
-    init(){
-        return new Promise( (resolve) => {
-            // Get Min and Max of Range
-            this.min =0;
-            this.max=100;
-            let descMin = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEPropRangeMinUUID); 
-            if(descMin == null ){
-                console.log("No min value for range property");
-                resolve(-1);
-            }                      
-            descMin.readValue().then(value =>{
-                this.min = value.getInt32(0,true);
-            }).catch(error => {
-                console.log("Get range property Min failed" + error);
-            });
+    processBlk(blkType, value, iPos){
 
-            let descMax = this.descriptors.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEPropRangeMaxUUID); 
-            if(descMax == null ){
-                console.log("No max value for range property. Setting to 100");
-                resolve(-1);
-            }                      
-            descMax.readValue().then(value =>{
-                this.max = value.getInt32(0, true);
+        if(blkType != kBlkRange){
+            return super.processBlk(blkType, value, iPos);
+        }
+        this.min = value.getInt32(iPos,true);
+        this.max = value.getInt32(iPos+4, true);
+        return iPos + 8;
 
-                // TODO THIS NEEDS WORK
-                // Call super - finish setup
-                super.init().then(results =>{
-                    resolve(0);
-                });
-
-            }).catch(error => {
-                console.log("Get range property Max failed" + error);
-                resolve(-1);
-            });
-
-        });
+    }
+    
+    _updateUX(value){
+        //set text
+        this.txtValue.setAttribute("data-length", ' ' + value);
+        // set gutter color - 
+        const percentage = (100 * (value - this.input.min)) / (this.input.max - this.input.min);
+        const bg = `linear-gradient(90deg, ${range_fill} ${percentage}%, ${range_background} ${percentage + 0.1}%)`;
+        this.input.style.background = bg;
     }
     //------------------------
    	generateElement(){
@@ -644,12 +648,7 @@ class rangeProperty extends Property{
    			
    		// Update slider values - event handler
    		this.input.addEventListener("input", event => {
-   			//set text
-			this.txtValue.setAttribute("data-length", ' '+event.target.value);
-			// set gutter color - 
-			const percentage = (100 * (this.input.value - this.input.min)) / (this.input.max - this.input.min);
-			const bg = `linear-gradient(90deg, ${range_fill} ${percentage}%, ${range_background} ${percentage + 0.1}%)`;
-			this.input.style.background = bg;
+            this._updateUX(event.target.value);
 		});
 
    		// On change, set the underlying value
@@ -662,8 +661,8 @@ class rangeProperty extends Property{
 
     updateValue(value){
         this.input.value = value.getInt32(0, true);
-        // send an event to the thing to trigger ui update
-        this.input.dispatchEvent(new Event('input'));
+        this._updateUX(this.input.value);
+
     }
 
     saveValue(){
@@ -903,14 +902,15 @@ function deleteProperties(){
         currentProperties[0].deleteElement(); // delete UI
         currentProperties.splice(0,1); // pop out of array
     }
-    document.getElementById(targetID).style.display="none"; // hide settings area
+    //document.getElementById(targetID).style.display="none"; // hide settings area
 }
 
 function showProperties(){ 
-
+/*
     if(currentProperties.length > 0){
-        document.getElementById(targetID).style.display="flex"; 
+       document.getElementById(targetID).style.display="flex"; 
     }
+*/
 }
 
 function compairPropOrder(a, b){
@@ -951,10 +951,8 @@ function addPropertyToSystem(bleCharacteristic){
     // use a promise to encapsualte this add - might be overkill ... but 
     // with a lot of props ...
     return new Promise( (resolve) => {
-        // Get the type descriptor
-        bleCharacteristic.getDescriptors().then(descs =>{
-
-            let descType = descs.find(({uuid}) => parseInt('0x'+uuid.slice(0,8)) === kBLEDescSFEPropTypeUUID);           
+        // Get the core descriptor
+        bleCharacteristic.getDescriptor(kBLEDescSFEPropCoreUUID).then(descType =>{
 
             if(descType == null){
                 console.log("No type descriptor found.")
@@ -963,7 +961,7 @@ function addPropertyToSystem(bleCharacteristic){
             //console.log(descs);
             // Get the value of the type descriptor
             descType.readValue().then(value =>{
-
+                let iPos = 0;
                 let attributes = value.getUint32(0,true);
                 let order = attributes >> 8 & 0xFF;
                 let type = attributes & 0xFF;
@@ -972,18 +970,28 @@ function addPropertyToSystem(bleCharacteristic){
                     console.log("Invalid Type value: " + type);
                     resolve(1);
                 }
+                iPos += 4;
+                // get name
+                let lenName = value.getUint8(iPos++);
+                let name = dataToText(new DataView(value.buffer, iPos, lenName));
+                iPos += lenName;
                 // build prop object - notice index into array of prop class defs 
-                let property = new propFactory[type-1](bleCharacteristic);   
+                let property = new propFactory[type-1](bleCharacteristic, name, order);   
 
-                property.order = order;
-                property.descriptors = descs;
+                // Does this property have onter data blocks in the descriptor value 
+                while(iPos < value.byteLength){
+                    let blkType = value.getUint8(iPos++);
+                    iPos = property.processBlk(blkType, value , iPos);
+                }
                 currentProperties.push(property);
 
                 resolve(0);
+            }).catch(error => {
+                console.log("readValue error: ", error);
+                resolve(1);
             });
         }).catch(error => {
-            console.log("getDescriptor - property type failed");
-            console.log(error);
+            console.log("getDescriptor - property type failed", error);
             resolve(1);
         });
     });
@@ -1033,7 +1041,7 @@ function startConnecting(){
     button.innerHTML ="Connecting to " + deviceName + '...';
     button.style.fontStyle='italic';
     button.disabled=true;
-    button.style.cursor = "not-allowed";       
+    button.style.cursor = "not-allowed";  
 
 }
 function endConnecting(success){ 
@@ -1049,6 +1057,7 @@ function endConnecting(success){
     }else{
         onDisconnected();
     }
+    console.log("Properties Load Time:", Date.now()-debugLoadTime);
 }
 function connectToBLEService() {
 
@@ -1069,7 +1078,9 @@ function connectToBLEService() {
     options.filters = filters;
     startConnecting();
     return navigator.bluetooth.requestDevice(options).then(device => {
-        
+
+        debugLoadTime=Date.now(); // time the loading of the settings parameters ...
+
         if(device.name)
             setDeviceName(device.name);
 
