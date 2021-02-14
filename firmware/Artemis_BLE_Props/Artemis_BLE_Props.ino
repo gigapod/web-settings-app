@@ -119,7 +119,7 @@ unsigned long ticks;
 // and a work "timeout" is implemented for N seconds. 
 //  
 // Define work timeout in MS. 
-const unsigned int bleOnConnectDelay = 1500;  // ms  on BLE connection "work" timeout
+const unsigned int bleOnConnectDelay = 3000;  // ms  on BLE connection "work" timeout
 
 
 //--------------------------------------------------------------------------------------
