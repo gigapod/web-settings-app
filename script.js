@@ -55,10 +55,15 @@ function setDeviceName(name){
 let debugLoadTime=0;
 
 // progress bar
-
+let progressInc = 1;
 function progress_set_value(value){
-
     document.getElementById("myBar").style.width=value + "%";
+
+}
+function progress_add_value(value){
+
+   let element =  document.getElementById("myBar");
+   element.style.width = (parseInt(element.style.width)+value) + "%";
 
 }
 function progress_start(){
@@ -547,11 +552,10 @@ function compairPropOrder(a, b){
 async function renderProperties(){
 
     // first sort our props so they display as desired
-    progress_set_value(70);
+    progress_add_value(5);
     currentProperties.sort(compairPropOrder);
 
     // build the UX for each property - want this is order -- so wait 
-    progress_set_value(80);
 
     for(const aProp of currentProperties){
         let result = await aProp.init();
@@ -607,7 +611,7 @@ function addPropertyToSystem(bleCharacteristic){
                     iPos = property.processBlk(blkType, value , iPos);
                 }
                 currentProperties.push(property);
-
+                progress_add_value(progressInc);
                 resolve(0);
             }).catch(error => {
                 console.log("readValue error: ", error);
@@ -716,12 +720,12 @@ function connectToBLEService() {
         return device.gatt.connect().then(gattServer => {
             
             bleConnected(gattServer);
-            progress_set_value(20);            
+            progress_add_value(15);            
 
             // Connect to our target Service 
             gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
 
-                progress_set_value(50);
+                progress_add_value(20);
                 // Now get all the characteristics for this service
                 primaryService.getCharacteristics().then(theCharacteristics => {                
 
@@ -732,7 +736,8 @@ function connectToBLEService() {
                     for(const aChar of theCharacteristics){
                         promises.push(addPropertyToSystem(aChar));
                     }
-                    progress_set_value(65);
+                    progress_add_value(5);
+                    progressInc = 40./theCharacteristics.length; // for updates in promises
                     Promise.all(promises).then((results)=>{
                         renderProperties(); // build and display prop UX
                         
