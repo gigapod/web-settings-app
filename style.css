@@ -365,3 +365,15 @@ a:hover {
 }
 .sparkfun-corner:hover svg { mix-blend-mode: normal;}
 .sparkfun-corner:hover .sparkfun-flame {color: #ff0000;}
+
+#myProgress {
+  width: 100%;
+  background-color: #0a0e31;
+  display: none;
+}
+
+#myBar {
+  width: 1%;
+  height: 3px;
+  background-color: green;
+}

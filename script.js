@@ -53,6 +53,22 @@ function setDeviceName(name){
 // DEBUG
 
 let debugLoadTime=0;
+
+// progress bar
+
+function progress_set_value(value){
+
+    document.getElementById("myBar").style.width=value + "%";
+
+}
+function progress_start(){
+
+    progress_set_value(0);
+    document.getElementById("myProgress").style.display="flex";
+}
+function progress_end(){
+    document.getElementById("myProgress").style.display="none";    
+}
 //---------------------------------------
 // property things
 //---------------------------------------
@@ -533,10 +549,12 @@ async function renderProperties(){
     // first sort our props so they display as desired
     currentProperties.sort(compairPropOrder);
 
+    progress_set_value(90);
     // build the UX for each property - want this is order -- so wait 
     for(const aProp of currentProperties){
         let result = await aProp.init();
     }
+    progress_set_value(100);
     showProperties();
     endConnecting(true);
     // still found the UX isn't all there yet ... wait a cycle or 2
@@ -647,6 +665,8 @@ function startConnecting(){
     button.disabled=true;
     button.style.cursor = "not-allowed";  
 
+    progress_start();
+
 }
 function endConnecting(success){ 
 
@@ -655,6 +675,7 @@ function endConnecting(success){
     button.style.fontStyle ='';
     button.disabled=false;
     button.style.cursor = "auto";   
+    progress_end();
     if(success){
         // update button label
         document.getElementById("connect").innerHTML ="Disconnect From " + deviceName;
@@ -688,15 +709,18 @@ function connectToBLEService() {
         if(device.name)
             setDeviceName(device.name);
 
-
+        progress_set_value(10);
         device.addEventListener('gattserverdisconnected', onDisconnected);
 
         return device.gatt.connect().then(gattServer => {
             
             bleConnected(gattServer);
+            progress_set_value(20);            
+
             // Connect to our target Service 
             gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
 
+                progress_set_value(50);
                 // Now get all the characteristics for this service
                 primaryService.getCharacteristics().then(theCharacteristics => {                
 
@@ -704,8 +728,12 @@ function connectToBLEService() {
                     // The adds are async - so use promises and then
                     // once everything is added, show the props UX all at once.
                     const promises=[];
+                    let inc = 30./theCharacteristics.length;
+                    let i = 50;
                     for(const aChar of theCharacteristics){
                         promises.push(addPropertyToSystem(aChar));
+                        i += inc;
+                        progress_set_value(i);
                     }
                     Promise.all(promises).then((results)=>{
                         renderProperties(); // build and display prop UX
