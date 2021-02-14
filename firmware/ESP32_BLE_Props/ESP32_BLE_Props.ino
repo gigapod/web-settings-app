@@ -141,8 +141,6 @@ BLECharacteristic * setupEnabledCharacteristic(BLEService *pService){
     // Set the value in the callbacks 
     pCharBaud->setCallbacks(new BoolPropertyValueCB(&deviceEnabled, onEnabledUpdate));
 
-    sf_bleprop_bool(pCharBaud, "Device Enabled");
-    
     return pCharBaud;
 }
 
@@ -169,8 +167,6 @@ BLECharacteristic * setupBaudCharacteristic(BLEService *pService){
 
     // Set the value in the callbacks 
     pCharBaud->setCallbacks(new IntPropertyValueCB((int32_t*)&baudRate, onBaudUpdate));
-
-    sf_bleprop_int(pCharBaud, "Output Baud Value");
     
     return pCharBaud;
 }
@@ -196,8 +192,6 @@ BLECharacteristic * setupSSIDCharacteristic(BLEService *pService){
     // Set the value in the callbacks 
     pChar->setCallbacks(new TextPropertyValueCB(strSSID, onSSIDUpdate));
 
-    sf_bleprop_string(pChar, "SSID");
-
     return pChar;
 }
 
@@ -222,8 +216,6 @@ BLECharacteristic * setupPasswordCharacteristic(BLEService *pService){
 
     // Set the value in the callbacks 
     pChar->setCallbacks(new TextPropertyValueCB(strPassword, onPasswordUpdate));
-
-    sf_bleprop_string(pChar, "Password");
 
     return pChar;
 }
@@ -251,8 +243,6 @@ BLECharacteristic * setupSampleRateCharacteristic(BLEService *pService){
     // Set the value in the callbacks - can just use the int callbacks
     pCharRate->setCallbacks(new IntPropertyValueCB((int32_t*)&sampleRate, onSampleRateUpdate));
 
-    sf_bleprop_range(pCharRate, "Sample Rate (sec)", sampleRateMin, sampleRateMax);
-
     return pCharRate;
 }
 
@@ -279,9 +269,6 @@ BLECharacteristic * setupDateCharacteristic(BLEService *pService){
     // Set the value in the callbacks 
     pCharDate->setCallbacks(new TextPropertyValueCB(strDate, onDateUpdate));
 
-    sf_bleprop_date(pCharDate, "Start Date");
-
-
     return pCharDate;   
 }
 //---------------------------------------------------------------------------------
@@ -306,8 +293,6 @@ BLECharacteristic * setupTimeCharacteristic(BLEService *pService){
 
     // Set the value in the callbacks 
     pCharTime->setCallbacks(new TextPropertyValueCB(strTime, onTimeUpdate));
-
-    sf_bleprop_time(pCharTime, "Start Time");
 
     return pCharTime;
 }
@@ -334,8 +319,6 @@ BLECharacteristic * setupOffsetCharacteristic(BLEService *pService){
 
     // Set the value in the callbacks 
     pCharOff->setCallbacks(new FloatPropertyValueCB(&offsetValue, onOffsetUpdate));
-
-    sf_bleprop_float(pCharOff, "Offset Bias");
 
     return pCharOff;
 
@@ -380,31 +363,39 @@ void setup() {
 
     BLECharacteristic *pChar;
 
-    setupEnabledCharacteristic(pService);
+    pChar = setupEnabledCharacteristic(pService);
+    sf_bleprop_bool(pChar, "Device Enabled", nullptr);
 
     // Event Details Group
     pChar = setupDateCharacteristic(pService);
-    sf_bleprop_group_title(pChar, "Event Details");     // Add title to 1st char    
-    setupTimeCharacteristic(pService); 
+    sf_bleprop_int(pChar, "Start Date", "Event Details");
+
+    pChar = setupTimeCharacteristic(pService); 
+    sf_bleprop_time(pChar, "Start Time", nullptr);
 
     // Device Settings
     pChar = setupBaudCharacteristic(pService);
-    sf_bleprop_group_title(pChar, "Device Settings"); // Title
+    sf_bleprop_int(pChar, "Output Baud Value", "Device Settings");
 
     // WiFi Settings
     pChar = setupSSIDCharacteristic(pService);
-    sf_bleprop_group_title(pChar, "WiFi Settings"); // Group title
-    setupPasswordCharacteristic(pService);    
+    sf_bleprop_string(pChar, "SSID", "WiFi Settings");
+
+    pChar =  setupPasswordCharacteristic(pService);    
+    sf_bleprop_string(pChar, "Password", nullptr);
 
     // Sensor Settings 
     pChar = setupSampleRateCharacteristic(pService);
-    sf_bleprop_group_title(pChar, "Sensor Settings");     // Group title
+    sf_bleprop_range(pChar, "Sample Rate (sec)", sampleRateMin, sampleRateMax, "Sensor Settings");    
+
+    pCharOffset = setupOffsetCharacteristic(pService);
+    sf_bleprop_float(pCharOffset, "Offset Bias", nullptr);
 
     // >> Notifications <<
     //
     // Will send update settings of this characteristic - save the Characterisitc pointer
     // for use in loop, and add the BLE2902 descriptor which is used for BLE Notifications.
-    pCharOffset = setupOffsetCharacteristic(pService);  
+
     // On ESP32 - to enable notification, you need to add a special descriptor
     pCharOffset->addDescriptor(new BLE2902());
 

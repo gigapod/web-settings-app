@@ -59,26 +59,54 @@ let debugLoadTime=0;
 // Used to main unique ids for property objects
 let namecnt = 0;
 
+const kBlkRange = 0x02;
+const kBlkTitle = 0x01;
+
 // Base property class 
 class Property{
 
-    constructor(bleChar, name){
+    constructor(bleChar, name, order){
       	this.characteristic = bleChar;
         this.name = name;
+        this.order = order;
     	this.ID = "property-" + namecnt++;  // unique id for the DOM
         this.div = null;
         this.timer=-1;
         this.group=null;
+        this.title=null;
+
     }
     
+    processBlk(blkType, value, iPos){
+
+
+        if(blkType != kBlkTitle){
+            return iPos;
+        }
+        let len = value.getUint8(iPos++);
+        this.title = dataToText(new DataView(value.buffer, iPos, len));
+        return iPos + len;
+
+    }
     init(){
 
         // For now - enable notifications on all values ...
         this.enableNotifications();
             
         // check for group title
+        
         return new Promise( (resolve) => {
 
+            // title?
+            if(this.title != null && this.title.length > 2){
+                this.group= document.createElement("div");
+
+                this.group.innerHTML = ` <h2 class="title">`+ this.title + `</h2>`;  
+                document.getElementById(targetID).appendChild(this.group);
+            }
+            this.generateElement();
+            resolve(0);
+            /*
             this.characteristic.getDescriptor(kBLEDescSFEGroupTitleUUID).then(descgrp => {
                  descgrp.readValue().then(value =>{
                     // decode name, set in instance data
@@ -98,14 +126,16 @@ class Property{
                 // no title descp
                 resolve(0);
             });
-
+        
         // Once the name is resolved, if we have a name, generate the property UX.
         // By waiting, we ensure title rendered before the element            
         }).then(_ =>{
             this.generateElement();
+            */
         }).catch(error => {
             console.log("Error setting up property: ", this.name);
         });
+        
 
     }
 
@@ -186,28 +216,17 @@ const range_background = "rgba(255, 255, 255, 0.214)";
 
 class rangeProperty extends Property{
 
-    init(){
-        return new Promise( (resolve) => {
-            // Get Min and Max of Range
-            this.min =0;
-            this.max=100;
-            this.characteristic.getDescriptor(kBLEDescSFEPropRangeLimitsUUID).then( descLimits => {
+    processBlk(blkType, value, iPos){
 
-                descLimits.readValue().then(value =>{
-                    this.min = value.getInt32(0,true);
-                    this.max = value.getInt32(4, true);
-                });
+        if(blkType != kBlkRange){
+            return super.processBlk(blkType, value, iPos);
+        }
+        this.min = value.getInt32(iPos,true);
+        this.max = value.getInt32(iPos+4, true);
+        return iPos + 8;
 
-            }).finally(_=>{
-                super.init().then(results =>{
-                    resolve(0);
-                });
-            }).catch(error => {
-                console.log("Get range property limits failed" + error);
-            });
-
-        });
     }
+    
     _updateUX(value){
         //set text
         this.txtValue.setAttribute("data-length", ' ' + value);
@@ -545,7 +564,7 @@ function addPropertyToSystem(bleCharacteristic){
             //console.log(descs);
             // Get the value of the type descriptor
             descType.readValue().then(value =>{
-
+                let iPos = 0;
                 let attributes = value.getUint32(0,true);
                 let order = attributes >> 8 & 0xFF;
                 let type = attributes & 0xFF;
@@ -554,14 +573,19 @@ function addPropertyToSystem(bleCharacteristic){
                     console.log("Invalid Type value: " + type);
                     resolve(1);
                 }
-
+                iPos += 4;
                 // get name
-                let name = dataToText(new DataView(value.buffer, 4));
+                let lenName = value.getUint8(iPos++);
+                let name = dataToText(new DataView(value.buffer, iPos, lenName));
+                iPos += lenName;
                 // build prop object - notice index into array of prop class defs 
-                let property = new propFactory[type-1](bleCharacteristic, name);   
+                let property = new propFactory[type-1](bleCharacteristic, name, order);   
 
-                property.order = order;
-                //property.descriptors = descs;
+                // Does this property have onter data blocks in the descriptor value 
+                while(iPos < value.byteLength){
+                    let blkType = value.getUint8(iPos++);
+                    iPos = property.processBlk(blkType, value , iPos);
+                }
                 currentProperties.push(property);
 
                 resolve(0);
