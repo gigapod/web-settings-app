@@ -709,18 +709,18 @@ function connectToBLEService() {
         if(device.name)
             setDeviceName(device.name);
 
-        progress_set_value(10);
+        progress_set_value(5);
         device.addEventListener('gattserverdisconnected', onDisconnected);
 
         return device.gatt.connect().then(gattServer => {
             
             bleConnected(gattServer);
-            progress_set_value(20);            
+            progress_set_value(25);            
 
             // Connect to our target Service 
             gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
 
-                progress_set_value(50);
+                progress_set_value(60);
                 // Now get all the characteristics for this service
                 primaryService.getCharacteristics().then(theCharacteristics => {                
 
@@ -728,8 +728,8 @@ function connectToBLEService() {
                     // The adds are async - so use promises and then
                     // once everything is added, show the props UX all at once.
                     const promises=[];
-                    let inc = 30./theCharacteristics.length;
-                    let i = 50;
+                    let inc = 25./theCharacteristics.length;
+                    let i = 60;
                     for(const aChar of theCharacteristics){
                         promises.push(addPropertyToSystem(aChar));
                         i += inc;
