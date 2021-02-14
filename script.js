@@ -506,14 +506,15 @@ function deleteProperties(){
         currentProperties[0].deleteElement(); // delete UI
         currentProperties.splice(0,1); // pop out of array
     }
-    document.getElementById(targetID).style.display="none"; // hide settings area
+    //document.getElementById(targetID).style.display="none"; // hide settings area
 }
 
 function showProperties(){ 
-
+/*
     if(currentProperties.length > 0){
        document.getElementById(targetID).style.display="flex"; 
     }
+    */
 }
 
 function compairPropOrder(a, b){
