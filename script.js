@@ -549,10 +549,14 @@ async function renderProperties(){
     // first sort our props so they display as desired
     currentProperties.sort(compairPropOrder);
 
-    progress_set_value(90);
     // build the UX for each property - want this is order -- so wait 
+
+    let inc = 30./currentProperties.length;
+    let i = 65;
     for(const aProp of currentProperties){
         let result = await aProp.init();
+        i += inc;
+        progress_set_value(i);
     }
     progress_set_value(100);
     showProperties();
@@ -715,12 +719,12 @@ function connectToBLEService() {
         return device.gatt.connect().then(gattServer => {
             
             bleConnected(gattServer);
-            progress_set_value(25);            
+            progress_set_value(20);            
 
             // Connect to our target Service 
             gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
 
-                progress_set_value(60);
+                progress_set_value(50);
                 // Now get all the characteristics for this service
                 primaryService.getCharacteristics().then(theCharacteristics => {                
 
@@ -728,8 +732,8 @@ function connectToBLEService() {
                     // The adds are async - so use promises and then
                     // once everything is added, show the props UX all at once.
                     const promises=[];
-                    let inc = 25./theCharacteristics.length;
-                    let i = 60;
+                    let inc = 15./theCharacteristics.length;
+                    let i = 50;
                     for(const aChar of theCharacteristics){
                         promises.push(addPropertyToSystem(aChar));
                         i += inc;
