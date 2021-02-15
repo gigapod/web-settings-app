@@ -182,7 +182,7 @@ public:
         uint16_t iNext = 0;
 
         // If the option string is too big, we return
-        if(strlen(strOptions) > kSFBLEMaxString)
+        if(!strOptions || !strlen(strOptions) || strlen(strOptions) > kSFBLEMaxString)
             return;
 
         // core information
