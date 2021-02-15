@@ -29,6 +29,7 @@
 #define kCharacteristicDateUUID     "beb5483e-36e1-4688-b7f5-ea07311b260c"
 #define kCharacteristicTimeUUID     "beb5483e-36e1-4688-b7f5-ea07311b260d"
 #define kCharacteristicOffsetUUID   "beb5483e-36e1-4688-b7f5-ea07311b260e"
+#define kCharacteristicModeUUID   "beb5483e-36e1-4688-b7f5-ea07311b260f"
 
 // helper for message limits
 #define kMessageMax 64
@@ -99,6 +100,13 @@ BLEStringCharacteristic bleCharTime(kCharacteristicTimeUUID, BLERead | BLEWrite,
 float offsetValue = 4.124;
 BLEFloatCharacteristic bleCharOffset(kCharacteristicOffsetUUID, BLERead | BLENotify | BLEWrite);
 
+//---------------------------------------------------------------------------
+//  Characteristic - "Mode" - Select type 
+//
+// This value has Notifications enabled.
+// A float property - "offset value"
+String strMode = "Stepper";
+BLEStringCharacteristic bleCharMode(kCharacteristicModeUUID, BLERead | BLEWrite, kMessageMax);
 
 //--------------- end object setup ------------------------
 // We're using the Enable property to control the on-board LED...
@@ -119,7 +127,7 @@ unsigned long ticks;
 // and a work "timeout" is implemented for N seconds. 
 //  
 // Define work timeout in MS. 
-const unsigned int bleOnConnectDelay = 3000;  // ms  on BLE connection "work" timeout
+const unsigned int bleOnConnectDelay = 3400;  // ms  on BLE connection "work" timeout
 
 
 //--------------------------------------------------------------------------------------
@@ -206,6 +214,19 @@ void offsetUpdateCB(BLEDevice central, BLECharacteristic theChar){
     theChar.readValue((void*)&offsetValue, 4);
     Serial.println(offsetValue);
 }
+
+//---------------------------------------------------------------------------
+void modeUpdateCB(BLEDevice central, BLECharacteristic theChar){
+
+    char buffer[kMessageMax+1]={0}; // buffer size + null - zero out 
+
+    int len = theChar.valueLength();
+    theChar.readValue((void*)buffer, len > kMessageMax ? kMessageMax : len);
+
+    strMode = buffer;
+    Serial.print("Mode Update: ");
+    Serial.println(strMode);
+}
 //--------------------------------------------------------------------------------------
 // Characteristic Setup
 //--------------------------------------------------------------------------------------
@@ -287,6 +308,12 @@ void setupBLECharacteristics(BLEService& theService){
     bleCharOffset.setValue(offsetValue);
     bleCharOffset.setEventHandler(BLEWritten, offsetUpdateCB);  
 
+    // The Mode (select type) characteristic
+    BLEProperties.add_select(bleCharMode, "Active Mode", "Constant|Stepper|Chirp"); // setup property descriptor  
+
+    theService.addCharacteristic(bleCharMode);  
+    bleCharMode.setValue(strMode);
+    bleCharMode.setEventHandler(BLEWritten, modeUpdateCB);  
 }
 //-------------------------------------------------------------------------
 // A BLE client  is connected logic.

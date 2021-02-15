@@ -19,16 +19,6 @@ console.clear();
 // BLE Codes for our service
 const kBLEDescSFEPropCoreUUID = 0xA101;
 
-// Property type codes - sent as a value of the char descriptor 
-const kSFEPropTypeBool      = 0x1;
-const kSFEPropTypeInt       = 0x2;
-const kSFEPropTypeRange     = 0x3;
-const kSFEPropTypeText      = 0x4;
-const kSFEPropTypeDate      = 0x5;
-const kSFEPropTypeTime      = 0x6;
-const kSFEPropTypeFloat     = 0x6;
-
-
 var bIsConnected = false;
 // Simple Data marshling code
 
@@ -78,8 +68,9 @@ function progress_end(){
 // Used to main unique ids for property objects
 let namecnt = 0;
 
-const kBlkRange = 0x02;
-const kBlkTitle = 0x01;
+const kBlkRange     = 0x02;
+const kBlkTitle     = 0x01;
+const kBlkSelectOps = 0x03;
 
 // Base property class 
 class Property{
@@ -492,6 +483,53 @@ class floatProperty extends Property{
         
     }
 }
+class selectProperty extends Property{
+
+    processBlk(blkType, value, iPos){
+
+        if(blkType != kBlkSelectOps){
+            return super.processBlk(blkType, value, iPos);
+        }
+        let len = value.getUint8(iPos++);
+        let buffer = dataToText(new DataView(value.buffer, iPos, len));
+        this.options = buffer.split('|');
+        return iPos + len;
+    }
+
+    //------------------------
+    generateElement(){
+
+        this.div = document.createElement("div");
+        let buffer =`<div class="select-prop">
+                        <select id="`+ this.ID + `">`;
+        for(const option of this.options ){
+            buffer = buffer + ` <option value="` + option + `">` + option + `</option>`;
+        }
+        this.div.innerHTML = buffer + ` </select>
+                            <label for="` + this.ID + `">` + this.name + `</label>
+                        </div>`;
+
+        this.select = this.div.querySelector('select');
+
+        document.getElementById(targetID).appendChild(this.div);
+
+        // On change, set the underlying value
+        this.select.addEventListener("change", () => {
+            this.saveValue();
+        });
+        // and now update to the current value
+        this.update();
+    }
+
+    updateValue(value){
+        this.select.value = dataToText(value);
+    }
+
+    saveValue(){
+        // Get the value from the select and save it.
+        this.characteristic.writeValue(textToData(this.select.value));
+    }
+}
 // --------------------
 // Delete all properties
 function deleteProperties(){
@@ -542,7 +580,7 @@ async function renderProperties(){
 //
 // Our property object defs = KEY: The order is same as type code index above. 
 const propFactory = [boolProperty, intProperty, rangeProperty, textProperty, dateProperty, 
-                     timeProperty, floatProperty];
+                     timeProperty, floatProperty, selectProperty];
 
 // use a promise to encapsulate the async BLE calls
 function addPropertyToSystem(bleCharacteristic){
@@ -565,7 +603,7 @@ function addPropertyToSystem(bleCharacteristic){
                 let order = attributes >> 8 & 0xFF;
                 let type = attributes & 0xFF;
 
-                if(type < kSFEPropTypeBool || type > propFactory.length ){
+                if(type < 0x1 || type > propFactory.length ){
                     console.log("Invalid Type value: " + type);
                     resolve(1);
                 }

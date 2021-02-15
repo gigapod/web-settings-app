@@ -311,6 +311,33 @@ button {
   user-select: none;
 }
 
+.settings .select-prop {
+  position: relative;
+  width: 100%;
+  height: calc(65px - 10px);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  padding: 10px 25px;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.settings .select-prop select {
+  position: absolute;
+  right: 12px;
+  background: #a0a0a0;
+  font-weight: bold;
+  font-size: 1.2rem;
+  width:45%;
+  text-align: left;
+}
+
+.settings .select-prop input + label {
+  user-select: none;
+}
+
 input[type=number]:invalid{
   background-color: #FFAAAA;
 }

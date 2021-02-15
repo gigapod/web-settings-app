@@ -73,6 +73,8 @@ float offsetValue = 4.124;
 BLECharacteristic *pCharOffset; // will use later for notifications.
 unsigned long ticks; // used for notification
 
+// Value for our mode "selector"
+std::string strMode("Stepper");
 
 //-------------------------------------------------------------------------
 // A BLE client (device) is connected logic.
@@ -323,6 +325,32 @@ BLECharacteristic * setupOffsetCharacteristic(BLEService *pService){
     return pCharOff;
 
 }
+
+//---------------------------------------------------------------------------------
+// Mode Characterisitic 
+//
+// A Mode Characterisitic (property) example - A string value
+
+void onModeUpdate(std::string &  newValue){
+
+    Serial.print("Update Mode Value: "); 
+    Serial.println(newValue.c_str());
+}
+BLECharacteristic * setupModeCharacteristic(BLEService *pService){
+
+    BLECharacteristic *pChar;
+
+    pChar = pService->createCharacteristic(
+                            kCharacteristicTimeUUID,
+                            BLECharacteristic::PROPERTY_READ  |
+                            BLECharacteristic::PROPERTY_WRITE );
+
+    // Set the value in the callbacks 
+    pChar->setCallbacks(new TextPropertyValueCB(strMode, onModeUpdate));
+
+    return pChar;
+}
+
 //---------------------------------------------------------------------------------
 // Setup our system
 //---------------------------------------------------------------------------------
@@ -394,6 +422,10 @@ void setup() {
 
     pCharOffset = setupOffsetCharacteristic(pService);
     BLEProperties.add_float(pCharOffset, "Offset Bias");
+
+    pChar = setupModeCharacteristic(pService);
+    // The Mode (select type) characteristic
+    BLEProperties.add_select(pChar, "Active Mode", "Constant|Stepper|Chirp"); 
 
     // >> Notifications <<
     //

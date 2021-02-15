@@ -51,12 +51,14 @@ uint8_t kSFEPropTypeText      = 0x4;
 uint8_t kSFEPropTypeDate      = 0x5;
 uint8_t kSFEPropTypeTime      = 0x6;
 uint8_t kSFEPropTypeFloat     = 0x7;
+uint8_t kSFEPropTypeSelect    = 0x8;
 
 
 // Descriptor Data block encoding block types
 
-#define kBlkRange  0x02
-#define kBlkTitle  0x01
+#define kBlkRange       0x02
+#define kBlkTitle       0x01
+#define kBlkSelectOp    0x03
 
 //-------------------------------------------------------------------------
 static uint8_t sort_pos=0;  // if there are over 256 props, this system has bigger issues
@@ -119,31 +121,37 @@ public:
 
     // -----------------------------------------------    
     // public API methods
+
     static void add_bool(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
         sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeBool);
     }
 
+    //-------------------------------------------------------------------------
     static void add_int(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
         sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeInt);
     } 
 
+    //-------------------------------------------------------------------------
     static void add_string(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
         sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeText);
     } 
 
+    //-------------------------------------------------------------------------
     static void add_float(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
         sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeFloat);
     } 
 
+    //-------------------------------------------------------------------------
     static void add_date(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
         sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeDate);
     } 
 
+    //-------------------------------------------------------------------------
     static void add_time(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
         sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeTime);
     } 
 
-
+    //-------------------------------------------------------------------------
     static void add_range(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName,  
                       sfe_ble_const uint32_t& vMin, sfe_ble_const uint32_t& vMax){
 
@@ -153,17 +161,40 @@ public:
         // core information
         iNext = sfBLEProperties::encode_core(dBuffer, iNext, strName, kSFEPropTypeRange);
 
-         // check title
-        iNext = sfBLEProperties::encode_title(dBuffer, iNext);
-
-    	// encode or range values
+    	// encode for range values
 		dBuffer[iNext++] = kBlkRange; // block type: range block of data
 
     	uint32_t range[2] = {vMin, vMax};    
     	memcpy((void*)(dBuffer+iNext), (void*)range, sizeof(range));
 
-        sfBLEProperties::set_descriptor(bleChar, dBuffer, iNext+sizeof(range));      
+        sfBLEProperties::set_descriptor(bleChar, dBuffer, iNext+sizeof(range));
 	}
+
+    //-------------------------------------------------------------------------
+    // Add a select property - a property that has a list of possible values.
+    //
+    // The value options are contained in a string, seperated by "|" characters.
+    //
+    static void add_select(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName,
+                           sfe_ble_const char *strOptions){
+
+        uint8_t dBuffer[kSFBLEBufferSize] = {0};
+        uint16_t iNext = 0;
+
+        // If the option string is too big, we return
+        if(strlen(strOptions) > kSFBLEMaxString)
+            return;
+
+        // core information
+        iNext = sfBLEProperties::encode_core(dBuffer, iNext, strName, kSFEPropTypeSelect);
+
+        // encode for select options
+        dBuffer[iNext++] = kBlkSelectOp; // block type: range block of data
+        iNext = sfBLEProperties::encode_string(dBuffer, iNext, strOptions, strlen(strOptions));
+
+        sfBLEProperties::set_descriptor(bleChar, dBuffer, iNext);
+
+    }
     //-------------------------------------------------------------------------
     // add_title()
     //
@@ -248,6 +279,9 @@ private:
         nName = nName > kSFBLEMaxString ? kSFBLEMaxString : nName;
         iNext = sfBLEProperties::encode_string(pBuffer, iNext, strName, nName );
 
+        // check title and return;
+        iNext = sfBLEProperties::encode_title(pBuffer, iNext);
+
         return iNext;
     }
 
@@ -280,9 +314,6 @@ private:
         uint16_t iNext = 0;
     
         iNext = sfBLEProperties::encode_core(dBuffer, iNext, strName, propType);
-
-        // check title
-        iNext = sfBLEProperties::encode_title(dBuffer, iNext);
 
         sfBLEProperties::set_descriptor(bleChar, dBuffer, iNext);  
 
