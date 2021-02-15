@@ -62,6 +62,7 @@ uint8_t kSFEPropTypeFloat     = 0x7;
 static uint8_t sort_pos=0;  // if there are over 256 props, this system has bigger issues
 
 //-------------------------------------------------------------------------
+// Platform dependant defs ...
 // ESP DEFS
 #ifdef ESP32
 
@@ -91,9 +92,8 @@ typedef BLECharacteristic& sfe_bleprop_charc_t;
 //
 // All class methods are class (static) methods. This provides a
 // cleaner API and allows the use of method overloading.
-
-// macros for other types - simple types
-
+// 
+// The class implements a singleton pattern. Allows for ".method()" call notation.
 
 class sfBLEProperties {
 
@@ -104,6 +104,7 @@ private:
     ~sfBLEProperties(){};
 
 public:
+    // -----------------------------------------------
     // singleton things
     static sfBLEProperties& getInstance(void){
 
@@ -114,7 +115,10 @@ public:
     // Delete copy and assignment constructors - b/c this is singleton.
     sfBLEProperties(sfBLEProperties const&) = delete;
     void operator=(sfBLEProperties const&) = delete;
+    // -----------------------------------------------
 
+    // -----------------------------------------------    
+    // public API methods
     static void add_bool(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
         sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeBool);
     }
@@ -153,7 +157,7 @@ public:
         iNext = sfBLEProperties::encode_title(dBuffer, iNext);
 
     	// encode or range values
-		dBuffer[iNext++] = kBlkRange; // range block of data
+		dBuffer[iNext++] = kBlkRange; // block type: range block of data
 
     	uint32_t range[2] = {vMin, vMax};    
     	memcpy((void*)(dBuffer+iNext), (void*)range, sizeof(range));
@@ -191,10 +195,10 @@ private:
         if(!nTitle)
             return iNext;
 
-        pBuffer[iNext++] = kBlkTitle;
+        pBuffer[iNext++] = kBlkTitle; // block type: title string
         iNext = sfBLEProperties::encode_string(pBuffer, iNext, sfBLEProperties::titleBuffer, nTitle );
 
-        // zero out string 
+        // zero out buffer string 
         memset((void*)sfBLEProperties::titleBuffer, '\0', sizeof(sfBLEProperties::titleBuffer));
 
         return iNext + nTitle;
@@ -251,7 +255,7 @@ private:
     // Function that actually adds the descriptor - this is platform dependant.
     static void set_descriptor(sfe_bleprop_charc_t bleChar, uint8_t *pData, size_t size){
 
-        uint8_t *pBuffer = new uint8_t[size];
+        uint8_t *pBuffer = new uint8_t[size]; // the descp needs persistant memory...
 
         memcpy((void*)pBuffer, (void*)pData, size);
 
@@ -264,7 +268,6 @@ private:
         bleChar.addDescriptor(*desc);
 #endif
     }
-
 
     //-------------------------------------------------------------------------
     // Add a basic value 
@@ -285,7 +288,7 @@ private:
 
     }
 };
-char sfBLEProperties::titleBuffer[kSFBLEMaxString]={0};
+char sfBLEProperties::titleBuffer[kSFBLEMaxString]={0}; // C++ static class var init/storage
 
 // Stash our singleton here - enable a .method() use pattern
 auto& BLEProperties = sfBLEProperties::getInstance();
