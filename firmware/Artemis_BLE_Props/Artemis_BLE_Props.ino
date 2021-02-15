@@ -64,7 +64,7 @@ BLEIntCharacteristic bleCharBaudRate(kCharacteristicBaudUUID, BLERead | BLEWrite
 
 //---------------------------------------------------------------------------
 // Third Characteristic - Device Name - string - a string Name for the device
-String strName = "Artimis Device";
+String strName = "Artemis Device";
 // Note: Setting max value size of kMessage Max  
 BLEStringCharacteristic bleCharName(kCharacteristicMessageUUID, BLERead | BLEWrite, kMessageMax);
 
@@ -282,7 +282,7 @@ void setupBLECharacteristics(BLEService& theService){
 
     // The Offset (float) characteristic
     BLEProperties.add_float(bleCharOffset, "Offset Bias"); // setup property descriptor  
-                      
+
     theService.addCharacteristic(bleCharOffset);  
     bleCharOffset.setValue(offsetValue);
     bleCharOffset.setEventHandler(BLEWritten, offsetUpdateCB);  
