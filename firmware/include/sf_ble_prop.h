@@ -1,3 +1,20 @@
+/*
+ *
+ * sf_ble_prop.h
+ *
+ *  The SparkFun BLE Property system.
+ *
+ *  Used to add "property" attributes to a BLE Characteristic using a BLE Descriptor. The
+ *  property information is used by a client application to render a property sheet 
+ *  that represents
+ *
+ *  USE
+ *
+ * 
+ *  HISTORY
+ *    Feb, 2021     - Initial developement - KDB
+ *  
+ */
 
 
 #pragma once
@@ -18,6 +35,7 @@
 #define kSFBLEBufferSize 256
 
 #define kSFBLEMaxString 64
+
 // The settings app defines a type protocol based on BLE Descriptors added to
 // Characteritics. This file simplifies / automatets setting this up. 
 //  
@@ -37,9 +55,8 @@ uint8_t kSFEPropTypeTime      = 0x6;
 uint8_t kSFEPropTypeFloat     = 0x7;
 
 
-/*
- *  Encoding block types
-*/
+// Descriptor Data block encoding block types
+
 #define kBlkRange  0x02
 #define kBlkTitle  0x01
 
@@ -68,126 +85,212 @@ typedef BLECharacteristic* sfe_bleprop_charc_t;
 typedef BLECharacteristic& sfe_bleprop_charc_t;
 
 #endif
-//-------------------------------------------------------------------------
-// addString
-// 
-// Add a c String to our descriptor buffer
-//
-// Returns new end point
-//
-// iEnd is the next open byte.
-size_t _add_string(uint8_t *pBuffer, size_t iNext, sfe_ble_const char *pString, size_t nString){
 
-    if(!pString || nString < 1)
+/////////////////////////////////////////////////////////////////////////////
+// Define a class that encapsulates all the routines and logic to 
+// encode data and build the BLE descriptors used to define 
+// a property.
+//
+// All class methods are class (static) methods. This provides a
+// cleaner API and allows the use of method overloading.
+
+// macros for other types - simple types
+
+
+class sfBLEProperties {
+
+
+private:
+    sfBLEProperties(){};
+
+    ~sfBLEProperties(){};
+
+public:
+    // singleton things
+    static sfBLEProperties& getInstance(void){
+
+        static sfBLEProperties instance;
+        return instance;
+    }
+
+    // Delete copy and assignment constructors - b/c this is singleton.
+    sfBLEProperties(sfBLEProperties const&) = delete;
+    void operator=(sfBLEProperties const&) = delete;
+
+    static void add_bool(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
+        sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeBool);
+    }
+
+    static void add_int(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
+        sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeInt);
+    } 
+
+    static void add_string(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
+        sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeText);
+    } 
+
+    static void add_float(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
+        sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeFloat);
+    } 
+
+    static void add_date(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
+        sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeDate);
+    } 
+
+    static void add_time(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
+        sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeTime);
+    } 
+
+
+    static void add_range(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName,  
+                      sfe_ble_const uint32_t& vMin, sfe_ble_const uint32_t& vMax){
+
+        uint8_t dBuffer[kSFBLEBufferSize] = {0};
+        uint16_t iNext = 0;
+
+        // core information
+        iNext = sfBLEProperties::encode_core(dBuffer, iNext, strName, kSFEPropTypeRange);
+
+         // check title
+        iNext = sfBLEProperties::encode_title(dBuffer, iNext);
+
+    	// encode or range values
+		dBuffer[iNext++] = kBlkRange; // range block of data
+
+    	uint32_t range[2] = {vMin, vMax};    
+    	memcpy((void*)(dBuffer+iNext), (void*)range, sizeof(range));
+
+        sfBLEProperties::set_descriptor(bleChar, kBLEDescSFEPropCoreUUID, dBuffer, iNext+sizeof(range));      
+	}
+    //-------------------------------------------------------------------------
+    // add_title()
+    //
+    // Add a title before the next property. This value is stashed until the next
+    // add property call, when the value is encoded into that properties 
+    // descriptor data block.
+    //
+    // Any string longer that kSFBLEMaxString is clipped. 
+    static void add_title(sfe_ble_const char *strTitle){
+
+        if(!strTitle || !strlen(strTitle))
+            return;
+
+        strlcpy(sfBLEProperties::titleBuffer, strTitle, sizeof(sfBLEProperties::titleBuffer));
+    }
+
+    // Buffer to stash a title 
+    static char titleBuffer[kSFBLEMaxString];
+
+private:
+
+    //-------------------------------------------------------------------------
+    // encode_title()
+    //
+    // Add a title string to the desc buffer if a title exists.
+    static size_t encode_title(uint8_t *pBuffer, size_t iNext){
+        // is there a title?
+        int nTitle = strlen(sfBLEProperties::titleBuffer);     
+        if(!nTitle)
+            return iNext;
+
+        pBuffer[iNext++] = kBlkTitle;
+        iNext = sfBLEProperties::encode_string(pBuffer, iNext, sfBLEProperties::titleBuffer, nTitle );
+
+        // zero out string 
+        memset((void*)sfBLEProperties::titleBuffer, '\0', sizeof(sfBLEProperties::titleBuffer));
+
+        return iNext + nTitle;
+    }
+    //-------------------------------------------------------------------------
+    // encode_attributes()
+    //
+    // Encode the general attributes of the property    
+    static  size_t encode_attributes(uint8_t *pBuffer, size_t iNext, uint8_t& propType){
+
+        pBuffer[iNext]      = propType;
+        pBuffer[iNext+1]    = sort_pos++;
+
+        return iNext+4; // alloc 4 bytes for - 2 for the future! 
+    }
+    //-------------------------------------------------------------------------
+    // encode_string
+    // 
+    // Add a c String to our descriptor buffer
+    //
+    // Returns new end point in buffer.
+    //
+    // iEnd is the next open byte.
+    static size_t encode_string(uint8_t *pBuffer, size_t iNext, sfe_ble_const char *pString, size_t nString){
+
+        if(!pString || nString < 1)
+            return iNext;
+
+        // Will need length of string plus 
+        pBuffer[iNext] = nString;
+        iNext++;
+        memcpy((void*)(pBuffer+iNext), pString, nString);
+
+        return iNext+nString;
+    }
+    //-------------------------------------------------------------------------
+    // add_core
+    //
+    // Add core attributes and name to a property.    
+    static size_t encode_core(uint8_t *pBuffer, size_t iNext, sfe_ble_const char *strName, uint8_t& propType){
+
+        // Attributes
+        iNext = sfBLEProperties::encode_attributes(pBuffer, iNext, propType);
+
+        // Prop Name
+        int nName = strlen(strName);
+        nName = nName > kSFBLEMaxString ? kSFBLEMaxString : nName;
+        iNext = sfBLEProperties::encode_string(pBuffer, iNext, strName, nName );
+
         return iNext;
+    }
 
-    // Will need length of string plus 
-    pBuffer[iNext] = nString;
-    iNext++;
-    memcpy((void*)(pBuffer+iNext), pString, nString);
+    //-------------------------------------------------------------------------
+    // Function that actually adds the descriptor - this is platform dependant.
+    static void set_descriptor(sfe_bleprop_charc_t bleChar, const char* uuid, uint8_t *pData, size_t size){
 
-    return iNext+nString;
-}
+        uint8_t *pBuffer = new uint8_t[size];
 
-size_t _add_attributes(uint8_t *pBuffer, size_t iNext, uint8_t& propType){
-
-    pBuffer[iNext]      = propType;
-    pBuffer[iNext+1]    = sort_pos++;
-
-    return iNext+4; // alloc 4 bytes for 
-}
-//-------------------------------------------------------------------------
-// Function that actually adds the descriptor - this is platform dependant.
-void _sf_bleprop_add_desc(sfe_bleprop_charc_t bleChar, const char* uuid, uint8_t *pData, size_t size){
-
-    uint8_t *pBuffer = new uint8_t[size];
-
-    memcpy((void*)pBuffer, (void*)pData, size);
+        memcpy((void*)pBuffer, (void*)pData, size);
 
 #ifdef ESP32
-    BLEDescriptor * pDesc = new BLEDescriptor(uuid);
-    pDesc->setValue(pBuffer, size);
-    bleChar->addDescriptor(pDesc);
+        BLEDescriptor * pDesc = new BLEDescriptor(uuid);
+        pDesc->setValue(pBuffer, size);
+        bleChar->addDescriptor(pDesc);
 #else
-    BLEDescriptor* desc = new BLEDescriptor( uuid, pBuffer, size);
-    bleChar.addDescriptor(*desc);
+        BLEDescriptor* desc = new BLEDescriptor( uuid, pBuffer, size);
+        bleChar.addDescriptor(*desc);
 #endif
-}
-
-//-------------------------------------------------------------------------
-size_t _sf_bleprop_core(uint8_t *pBuffer, size_t iNext, sfe_ble_const char *strName, uint8_t& propType){
-
-    // Attributes
-    iNext = _add_attributes(pBuffer, iNext, propType);
-
-    // Prop Name
-	int nName = strlen(strName);
-	nName = nName > kSFBLEMaxString ? kSFBLEMaxString : nName;
-    iNext = _add_string(pBuffer, iNext, strName, nName );
-
-    return iNext;
-}
-
-//-------------------------------------------------------------------------
-void _sf_bleprop_basic(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName, uint8_t& propType,
-                        sfe_ble_const char *strTitle){
-
-    uint8_t dBuffer[kSFBLEBufferSize] = {0};
-    uint16_t iNext = 0;
-    
-    iNext = _sf_bleprop_core(dBuffer, iNext, strName, propType);
-
-    // is there a title?
-    if(strTitle){
-        int nTitle = strlen(strTitle);
-        nTitle = nTitle > kSFBLEMaxString ? kSFBLEMaxString : nTitle;
-        dBuffer[iNext++] = kBlkTitle;
-        iNext = _add_string(dBuffer, iNext, strTitle, nTitle );
     }
-    _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropCoreUUID, dBuffer, iNext);  
-
-}
-//-------------------------------------------------------------------------
-// macros for other types - simple types
-#define sf_bleprop_bool(__char__, __name__, __title__) _sf_bleprop_basic(__char__, __name__, kSFEPropTypeBool, __title__)
-#define sf_bleprop_int(__char__, __name__, __title__) _sf_bleprop_basic(__char__, __name__, kSFEPropTypeInt, __title__)
-#define sf_bleprop_string(__char__, __name__, __title__) _sf_bleprop_basic(__char__, __name__, kSFEPropTypeText, __title__)
-#define sf_bleprop_date(__char__, __name__, __title__) _sf_bleprop_basic(__char__, __name__, kSFEPropTypeDate, __title__)
-#define sf_bleprop_time(__char__, __name__, __title__) _sf_bleprop_basic(__char__, __name__, kSFEPropTypeTime, __title__)
-#define sf_bleprop_float(__char__, __name__, __title__) _sf_bleprop_basic(__char__, __name__, kSFEPropTypeFloat, __title__)
-
-void sf_bleprop_range(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName,  
-					  sfe_ble_const uint32_t& vMin, sfe_ble_const uint32_t& vMax,
-                      sfe_ble_const char *strTitle){
 
 
-    uint8_t dBuffer[kSFBLEBufferSize] = {0};
-    uint16_t iNext = 0;
+    //-------------------------------------------------------------------------
+    // Add a basic value 
+    //
+    // If a property type is just defined by TYPE and NAME, this routine is what
+    // to call
+    static void add_basic(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName, uint8_t& propType){
 
-    // core information
-    iNext = _sf_bleprop_core(dBuffer, iNext, strName, kSFEPropTypeRange);
-
-    // is there a title?
-    if(strTitle){
-        int nTitle = strlen(strTitle);
-        nTitle = nTitle > kSFBLEMaxString ? kSFBLEMaxString : nTitle;
-        dBuffer[iNext++] = kBlkTitle;
-        iNext = _add_string(dBuffer, iNext, strTitle, nTitle );
-    }
-    // encode or range values
-
-    dBuffer[iNext++] = kBlkRange;
-
+        uint8_t dBuffer[kSFBLEBufferSize] = {0};
+        uint16_t iNext = 0;
     
-    // Descriptor values must be persistant, not stack-based. Expect users not to care/know,
-    // so alloc copies..
-    uint32_t range[2] = {vMin, vMax};    
-    memcpy((void*)(dBuffer+iNext), (void*)range, sizeof(range));
+        iNext = sfBLEProperties::encode_core(dBuffer, iNext, strName, propType);
 
-    iNext += sizeof(range);
+        // check title
+        iNext = sfBLEProperties::encode_title(dBuffer, iNext);
 
-    _sf_bleprop_add_desc(bleChar, kBLEDescSFEPropCoreUUID, dBuffer, iNext);      
+        sfBLEProperties::set_descriptor(bleChar, kBLEDescSFEPropCoreUUID, dBuffer, iNext);  
 
-}
+    }
+};
+char sfBLEProperties::titleBuffer[kSFBLEMaxString]={0};
+
+// Stash our singleton here - enable a .method() use pattern
+auto& BLEProperties = sfBLEProperties::getInstance();
+
 
 

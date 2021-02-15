@@ -364,32 +364,36 @@ void setup() {
     BLECharacteristic *pChar;
 
     pChar = setupEnabledCharacteristic(pService);
-    sf_bleprop_bool(pChar, "Device Enabled", nullptr);
+    BLEProperties.add_bool(pChar, "Device Enabled");
 
     // Event Details Group
     pChar = setupDateCharacteristic(pService);
-    sf_bleprop_date(pChar, "Start Date", "Event Details");
+    BLEProperties.add_title("Event Details");
+    BLEProperties.add_date(pChar, "Start Date");
 
     pChar = setupTimeCharacteristic(pService); 
-    sf_bleprop_time(pChar, "Start Time", nullptr);
+    BLEProperties.add_time(pChar, "Start Time");
 
     // Device Settings
     pChar = setupBaudCharacteristic(pService);
-    sf_bleprop_int(pChar, "Output Baud Value", "Device Settings");
+    BLEProperties.add_title("Device Settings");    
+    BLEProperties.add_int(pChar, "Output Baud Value");
 
     // WiFi Settings
     pChar = setupSSIDCharacteristic(pService);
-    sf_bleprop_string(pChar, "SSID", "WiFi Settings");
+    BLEProperties.add_title("WiFi Settings");        
+    BLEProperties.add_string(pChar, "SSID");
 
     pChar =  setupPasswordCharacteristic(pService);    
-    sf_bleprop_string(pChar, "Password", nullptr);
+    BLEProperties.add_string(pChar, "Password");
 
     // Sensor Settings 
     pChar = setupSampleRateCharacteristic(pService);
-    sf_bleprop_range(pChar, "Sample Rate (sec)", sampleRateMin, sampleRateMax, "Sensor Settings");    
+    BLEProperties.add_title("Sensor Settings");            
+    BLEProperties.add_range(pChar, "Sample Rate (sec)", sampleRateMin, sampleRateMax);    
 
     pCharOffset = setupOffsetCharacteristic(pService);
-    sf_bleprop_float(pCharOffset, "Offset Bias", nullptr);
+    BLEProperties.add_float(pCharOffset, "Offset Bias");
 
     // >> Notifications <<
     //
