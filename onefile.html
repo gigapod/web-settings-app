@@ -1184,7 +1184,7 @@ function connectToBLEService() {
                         promises.push(addPropertyToSystem(aChar));
                     }
                     progress_add_value(5);
-                    progressInc = 50./theCharacteristics.length; // for updates in promises
+                    progressInc = 60./theCharacteristics.length; // for updates in promises
                     Promise.all(promises).then((results)=>{
                         renderProperties(); // build and display prop UX
                         
