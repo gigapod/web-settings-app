@@ -18,8 +18,6 @@ console.clear();
 
 // BLE Codes for our service
 const kBLEDescSFEPropCoreUUID = 0xA101;
-const kBLEDescSFEPropRangeLimitsUUID = 0xA110;
-const kBLEDescSFEGroupTitleUUID = 0xA112;
 
 // Property type codes - sent as a value of the char descriptor 
 const kSFEPropTypeBool      = 0x1;
@@ -127,32 +125,7 @@ class Property{
             }
             this.generateElement();
             resolve(0);
-            /*
-            this.characteristic.getDescriptor(kBLEDescSFEGroupTitleUUID).then(descgrp => {
-                 descgrp.readValue().then(value =>{
-                    // decode name, set in instance data
-                    let grpName= dataToText(value);
-                    if(grpName.length > 2){
-                        this.group= document.createElement("div");
-
-                        this.group.innerHTML = ` <h2 class="title">`+ grpName + `</h2>`;  
-                        document.getElementById(targetID).appendChild(this.group);
-                    }
-                    resolve(0);
-                }).catch(error => {
-                    console.log("Goup Title Value: ", error);
-                    resolve(0);// keep moving on
-                });
-            }).catch(error => {
-                // no title descp
-                resolve(0);
-            });
-        
-        // Once the name is resolved, if we have a name, generate the property UX.
-        // By waiting, we ensure title rendered before the element            
-        }).then(_ =>{
-            this.generateElement();
-            */
+            
         }).catch(error => {
             console.log("Error setting up property: ", this.name);
         });

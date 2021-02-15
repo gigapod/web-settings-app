@@ -39,10 +39,8 @@
 // The settings app defines a type protocol based on BLE Descriptors added to
 // Characteritics. This file simplifies / automatets setting this up. 
 //  
-// BLE UUID Codes for our Protocol Descriptors 
+// BLE UUID Code for our Protocol Descriptor 
 #define kBLEDescSFEPropCoreUUID         "A101"
-#define kBLEDescSFEPropRangeLimitsUUID  "A110"
-#define kBLEDescSFEGroupTitleUUID       "A112"
 
 
 // Property type codes - sent as a value of the char descriptor 
@@ -160,7 +158,7 @@ public:
     	uint32_t range[2] = {vMin, vMax};    
     	memcpy((void*)(dBuffer+iNext), (void*)range, sizeof(range));
 
-        sfBLEProperties::set_descriptor(bleChar, kBLEDescSFEPropCoreUUID, dBuffer, iNext+sizeof(range));      
+        sfBLEProperties::set_descriptor(bleChar, dBuffer, iNext+sizeof(range));      
 	}
     //-------------------------------------------------------------------------
     // add_title()
@@ -251,18 +249,18 @@ private:
 
     //-------------------------------------------------------------------------
     // Function that actually adds the descriptor - this is platform dependant.
-    static void set_descriptor(sfe_bleprop_charc_t bleChar, const char* uuid, uint8_t *pData, size_t size){
+    static void set_descriptor(sfe_bleprop_charc_t bleChar, uint8_t *pData, size_t size){
 
         uint8_t *pBuffer = new uint8_t[size];
 
         memcpy((void*)pBuffer, (void*)pData, size);
 
 #ifdef ESP32
-        BLEDescriptor * pDesc = new BLEDescriptor(uuid);
+        BLEDescriptor * pDesc = new BLEDescriptor(kBLEDescSFEPropCoreUUID);
         pDesc->setValue(pBuffer, size);
         bleChar->addDescriptor(pDesc);
 #else
-        BLEDescriptor* desc = new BLEDescriptor( uuid, pBuffer, size);
+        BLEDescriptor* desc = new BLEDescriptor( kBLEDescSFEPropCoreUUID, pBuffer, size);
         bleChar.addDescriptor(*desc);
 #endif
     }
@@ -283,7 +281,7 @@ private:
         // check title
         iNext = sfBLEProperties::encode_title(dBuffer, iNext);
 
-        sfBLEProperties::set_descriptor(bleChar, kBLEDescSFEPropCoreUUID, dBuffer, iNext);  
+        sfBLEProperties::set_descriptor(bleChar, dBuffer, iNext);  
 
     }
 };
