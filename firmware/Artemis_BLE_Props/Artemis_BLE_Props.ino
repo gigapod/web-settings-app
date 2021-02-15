@@ -418,7 +418,7 @@ void loop()
         // Update the value of offset and set in BLE char
         // Should trigger a notification on client
         offsetValue += .5;
-        if(deviceConnected){
+        if(deviceConnected && doWork()){
             bleCharOffset.setValue(offsetValue); // triggers notify message b/c char created w/ BLENotify
             Serial.print("Incrementing Offset to: "); Serial.println(offsetValue);
         }
