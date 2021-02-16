@@ -404,8 +404,14 @@ void setup() {
 
     // Device Settings
     pChar = setupBaudCharacteristic(pService);
-    BLEProperties.add_title("Device Settings");    
-    BLEProperties.add_int(pChar, "Output Baud Value");
+    BLEProperties.add_title("Device Settings");   
+    // NOTE: Can call add_int() with or without an increment value. 
+    
+    // No increment - defaults to 1
+    //BLEProperties.add_int(pChar, "Baud Rate"); // setup property descriptor        
+
+    // Set to an increment value of 100
+    BLEProperties.add_int(pChar, "Baud Rate", 100);  
 
     // WiFi Settings
     pChar = setupSSIDCharacteristic(pService);
@@ -421,7 +427,14 @@ void setup() {
     BLEProperties.add_range(pChar, "Sample Rate (sec)", sampleRateMin, sampleRateMax);    
 
     pCharOffset = setupOffsetCharacteristic(pService);
-    BLEProperties.add_float(pCharOffset, "Offset Bias");
+
+    // add_float() - default, with no increment defaults to .01 increment
+    // BLEProperties.add_float(pCharOffset, "Offset Bias");
+
+    // Set the increment value of .001
+    BLEProperties.add_float(pCharOffset, "Offset Bias", 0.001);    
+
+
 
     pChar = setupModeCharacteristic(pService);
     // The Mode (select type) characteristic

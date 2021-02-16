@@ -71,6 +71,7 @@ let namecnt = 0;
 const kBlkRange     = 0x02;
 const kBlkTitle     = 0x01;
 const kBlkSelectOps = 0x03;
+const kBlkIncrement = 0x04;
 
 // Base property class 
 class Property{
@@ -300,14 +301,27 @@ class textProperty extends Property{
 // intProperty Object
 class intProperty extends Property{
 
-    
+    constructor(bleChar, name, order){
+
+        super(bleChar, name, order);
+        this.increment = 1;         
+    }
+
+    processBlk(blkType, value, iPos){
+
+        if(blkType != kBlkIncrement){
+            return super.processBlk(blkType, value, iPos);
+        }
+        this.increment = value.getUint32(iPos,true);
+        return iPos + 4;
+    }
    	generateElement(){
 
    		this.div = document.createElement("div");
 
    		this.div.innerHTML = `
 	   		<div class="number-prop">
-        <input type="number" id="`+ this.ID + `" step="1" />
+        <input type="number" id="`+ this.ID + `" step="` + this.increment + `" />
 				<label for="` + this.ID + `">` + this.name + `</label>
 			</div>
    		`;
@@ -444,12 +458,26 @@ class timeProperty extends Property{
 }
 class floatProperty extends Property{
     
+     processBlk(blkType, value, iPos){
+
+        if(blkType != kBlkIncrement){
+            return super.processBlk(blkType, value, iPos);
+        }
+        this.increment = value.getFloat32(iPos,true).toFixed(5); //round it
+
+        return iPos + 4;
+    }
+    constructor(bleChar, name, order){
+
+        super(bleChar, name, order);
+        this.increment = .01;         
+    }
     generateElement(){
 
       this.div = document.createElement("div");
       this.div.innerHTML = `
         <div class="number-prop">
-        <input type="number" id="`+ this.ID + `" step=".001" />
+        <input type="number" id="`+ this.ID + `" step="`+this.increment+`" />
         <label for="` + this.ID + `">` + this.name + `</label>
       </div>
       `;

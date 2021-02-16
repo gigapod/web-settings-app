@@ -280,7 +280,13 @@ void setupBLECharacteristics(BLEService& theService){
 
     // The BaudRate characteristic with title
     BLEProperties.add_title("Device Settings");
-    BLEProperties.add_int(bleCharBaudRate, "Baud Rate"); // setup property descriptor    
+
+    // NOTE: Can call add_int() with or without an increment value. 
+    // No increment - defaults to 1
+    //BLEProperties.add_int(bleCharBaudRate, "Baud Rate"); // setup property descriptor        
+    
+    // Set to an increment value of 100
+    BLEProperties.add_int(bleCharBaudRate, "Baud Rate", 100); // setup property descriptor    
 
     theService.addCharacteristic(bleCharBaudRate);  
     bleCharBaudRate.setValue(baudRate);
@@ -302,8 +308,14 @@ void setupBLECharacteristics(BLEService& theService){
     bleCharSampleRate.setEventHandler(BLEWritten, sampleRateUpdateCB);             
 
     // The Offset (float) characteristic
-    BLEProperties.add_float(bleCharOffset, "Offset Bias"); // setup property descriptor  
 
+    // add_float() - default, with no increment defaults to .01 increment
+    // BLEProperties.add_float(bleCharOffset, "Offset Bias"); // setup property descriptor  
+
+    // Set a increment value of .001
+    BLEProperties.add_float(bleCharOffset, "Offset Bias", 0.001); // setup property descriptor  
+
+    // Set the increment value of .001
     theService.addCharacteristic(bleCharOffset);  
     bleCharOffset.setValue(offsetValue);
     bleCharOffset.setEventHandler(BLEWritten, offsetUpdateCB);  

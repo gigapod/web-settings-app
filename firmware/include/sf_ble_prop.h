@@ -59,6 +59,7 @@ uint8_t kSFEPropTypeSelect    = 0x8;
 #define kBlkRange       0x02
 #define kBlkTitle       0x01
 #define kBlkSelectOp    0x03
+#define kBlkIncrement   0x04
 
 //-------------------------------------------------------------------------
 static uint8_t sort_pos=0;  // if there are over 256 props, this system has bigger issues
@@ -127,18 +128,66 @@ public:
     }
 
     //-------------------------------------------------------------------------
+    // add_int()  - With increment value
+    //
+    static void add_int(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName, 
+                        uint32_t increment){
+
+        uint8_t dBuffer[kSFBLEBufferSize] = {0};
+        uint16_t iNext = 0;
+
+        // core information
+        iNext = sfBLEProperties::encode_core(dBuffer, iNext, strName, kSFEPropTypeInt);
+
+        // encode the increment
+        dBuffer[iNext++] = kBlkIncrement; // block type: It's an increment
+
+        memcpy((void*)(dBuffer+iNext), (void*)&increment, sizeof(increment));
+
+        sfBLEProperties::set_descriptor(bleChar, dBuffer, iNext+sizeof(increment));
+    } 
+    //-------------------------------------------------------------------------
+    // add_int()
+    //
+    // Increment is set to 1
     static void add_int(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
-        sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeInt);
+        sfBLEProperties::add_int(bleChar, strName, 1);
+
     } 
 
     //-------------------------------------------------------------------------
     static void add_string(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
         sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeText);
     } 
-
     //-------------------------------------------------------------------------
+    // add_float()  - With increment value
+
+    // Note, this only goes to 5 decimal places to manage float math
+    //
+    static void add_float(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName, 
+                        float increment){
+
+        uint8_t dBuffer[kSFBLEBufferSize] = {0};
+        uint16_t iNext = 0;
+
+        // core information
+        iNext = sfBLEProperties::encode_core(dBuffer, iNext, strName, kSFEPropTypeFloat);
+
+        // encode the increment
+        dBuffer[iNext++] = kBlkIncrement; // block type: It's an increment
+
+
+        memcpy((void*)(dBuffer+iNext), (void*)&increment, sizeof(increment));
+
+        sfBLEProperties::set_descriptor(bleChar, dBuffer, iNext+sizeof(increment));
+    }
+    //-------------------------------------------------------------------------
+    // add_float()
+    //
+    // Default increment - .01
+    //
     static void add_float(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
-        sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeFloat);
+        sfBLEProperties::add_float(bleChar, strName, 0.01);
     } 
 
     //-------------------------------------------------------------------------
