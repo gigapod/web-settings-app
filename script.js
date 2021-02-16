@@ -749,11 +749,14 @@ function connectToGATT(device, nTries){
         return;
     }
     nTries--;
+    console.log(device);
 
     progress_set_value(5);
 
+    console.log("Starting gatt connect");
     return device.gatt.connect().then(gattServer => {
             
+            console.log("gatt connected");
             bleConnected(gattServer);
             progress_add_value(15);            
 
