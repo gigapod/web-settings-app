@@ -727,6 +727,13 @@ function endConnecting(success){
     }
     console.log("Properties Load Time:", Date.now()-debugLoadTime);
 }
+//------------------------------------------------------
+// connectToGATT()
+//
+// Will retry if the connection seqeunce fails - retries nTries.
+//
+// On failure, this routine will recurse on itself. 
+//
 function connectToGATT(device, nTries){
 
     if(nTries<1){
@@ -738,10 +745,9 @@ function connectToGATT(device, nTries){
     nTries--;
 
     progress_set_value(5);
-    console.log("IN Connect to Gatt");
+
     return device.gatt.connect().then(gattServer => {
             
-            console.log("Connected");
             bleConnected(gattServer);
             progress_add_value(15);            
 
@@ -811,58 +817,12 @@ function connectToBLEService() {
         device.addEventListener('gattserverdisconnected', onDisconnected);
 
         ///////////////////////////////////
-        // TODO:
-        //   Need to throw this into a seperate, async function and do:
-        //     - Make this call to connect and everything that follows
-        //     - do the await thing, or chain some error handling on this
-        //       so you can do retries -- and handle whe the gatt connection
-        //       drops during initial setup. 
+        // Connect to the GATT - 
+        // 
+        // GATT service connection is touchy on windoze. This routine inplements a retry
+        // strategy, trying 3 times to connect.
         ////////////////////////////////////
         connectToGATT(device, 3);
-        /*
-        return device.gatt.connect().then(gattServer => {
-            
-            bleConnected(gattServer);
-            progress_add_value(15);            
-
-            // Connect to our target Service 
-            gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
-
-                progress_add_value(20);
-                // Now get all the characteristics for this service
-                primaryService.getCharacteristics().then(theCharacteristics => {                
-
-                    // Add the characteristics to the property sheet
-                    // The adds are async - so use promises, chaining everything
-                    // together
-
-                    progress_add_value(5);
-                    progressInc = 70./theCharacteristics.length; // for updates in promises
-
-                    // Chain together
-                    let chain = Promise.resolve();
-                    for(const aChar of theCharacteristics){                    
-                        chain = chain.then(()=>addPropertyToSystem(aChar));
-                    }
-                    chain.then(() =>renderProperties());                    
-
-                }).catch(error => {
-                    console.log("getCharacteristics Error: " + error);
-                    alert("Error communicating with device. Disconnecting.");
-                    endConnecting(false);
-                });
-
-
-            }).catch(error => {
-                console.log("getPrimaryService Error:" + error);
-                alert("Unable to connect with the BLE settings service. Disconnecting.");
-                endConnecting(false);
-            });
-        }).catch(error => {
-            console.log(error);
-            alert("Unable to connect with the BLE settings service. Disconnecting.");
-            endConnecting(false);
-        });*/
                 
     }).catch(error => {
         console.log(error);
