@@ -779,19 +779,19 @@ function connectToGATT(device, nTries){
                 chain.then(() =>renderProperties());       
 
             }).catch(error => {
-                console.log("Error: connectToGATT->getCharacteristics(), reconnecting: ", nTries, error);
+                console.log("Error: connectToGATT->getCharacteristics(), reconnecting: ", nTries);
                 disconnectBLEService();
                 setTimeout(()=>connectToGATT(device, nTries), 200); // slight delay to retry
             });
 
         }).catch(error => {
-            console.log("Error: connectToGATT->getPrimaryService(), reconnecting:", nTries, error);
+            console.log("Error: connectToGATT->getPrimaryService(), reconnecting:", nTries);
             disconnectBLEService();
             setTimeout(()=>connectToGATT(device, nTries), 200); // slight delay to retry            
             });
                 
     }).catch(error => {
-        console.log("Error: connectToGATT->device.connect(), reconnecting:", nTries, error);
+        console.log("Error: connectToGATT->device.connect(), reconnecting:", nTries);
         setTimeout(()=>connectToGATT(device, nTries), 200); // slight delay to retry                    
     });
 }
