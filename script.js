@@ -753,10 +753,8 @@ function connectToGATT(device, nTries){
 
     progress_set_value(5);
 
-    console.log("Starting gatt connect");
     return device.gatt.connect().then(gattServer => {
        
-        console.log('connected');
         bleConnected(gattServer);
         progress_add_value(15);            
 
