@@ -733,6 +733,7 @@ function endConnecting(success){
     }
     console.log("Properties Load Time:", Date.now()-debugLoadTime);
 }
+
 //------------------------------------------------------
 // connectToGATT()
 //
@@ -749,54 +750,52 @@ function connectToGATT(device, nTries){
         return;
     }
     nTries--;
-    console.log(device);
 
     progress_set_value(5);
 
     console.log("Starting gatt connect");
     return device.gatt.connect().then(gattServer => {
-            
-            console.log("gatt connected");
-            bleConnected(gattServer);
-            progress_add_value(15);            
+       
+        console.log('connected');
+        bleConnected(gattServer);
+        progress_add_value(15);            
 
-            // Connect to our target Service 
-            gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
+        // Connect to our target Service 
+        return gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
 
-                progress_add_value(20);
-                // Now get all the characteristics for this service
-                primaryService.getCharacteristics().then(theCharacteristics => {   
-                    // Add the characteristics to the property sheet
-                    // The adds are async - so use promises, chaining everything
-                    // together
+            progress_add_value(20);
+            // Now get all the characteristics for this service
+            primaryService.getCharacteristics().then(theCharacteristics => {   
+                // Add the characteristics to the property sheet
+                // The adds are async - so use promises, chaining everything
+                // together
 
-                    progress_add_value(5);
-                    progressInc = 70./theCharacteristics.length; // for updates in promises
+                progress_add_value(5);
+                progressInc = 70./theCharacteristics.length; // for updates in promises
 
-                    // Chain together
-                    let chain = Promise.resolve();
-                    for(const aChar of theCharacteristics){                    
-                        chain = chain.then(()=>addPropertyToSystem(aChar));
-                    }
-                    chain.then(() =>renderProperties());       
-
-                }).catch(error => {
-                    console.log("Error: connectToGATT->getCharacteristics(), interation:", nTries);
-                    disconnectBLEService();
-                    connectToGATT(device, nTries);
-
-                });
+                // Chain together
+                let chain = Promise.resolve();
+                for(const aChar of theCharacteristics){                    
+                    chain = chain.then(()=>addPropertyToSystem(aChar));
+                }
+                chain.then(() =>renderProperties());       
 
             }).catch(error => {
-                console.log("Error: connectToGATT->getPrimaryService(), interation:", nTries, error);
+                console.log("Error: connectToGATT->getCharacteristics(), interation:", nTries, error);
                 disconnectBLEService();
                 connectToGATT(device, nTries);
-
             });
+
         }).catch(error => {
-            console.log("Error: connectToGATT->device.connect(), interation:", nTries);
+            console.log("Error: connectToGATT->getPrimaryService(), interation:", nTries, error);
+            disconnectBLEService();
             connectToGATT(device, nTries);
         });
+                
+    }).catch(error => {
+        console.log("Error: connectToGATT->device.connect(), interation:", nTries, error);
+        connectToGATT(device, nTries);
+    });
 }
 
 function connectToBLEService() {
