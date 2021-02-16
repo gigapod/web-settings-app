@@ -752,15 +752,16 @@ function connectToGATT(device, nTries){
     nTries--;
 
     progress_set_value(5);
-
+        console.log("gatt.connnect() = calling");
     return device.gatt.connect().then(gattServer => {
 
         bleConnected(gattServer);
         progress_add_value(15);            
 
         // Connect to our target Service 
+        console.log("gatt.connnect() = success");
         return gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
-
+            console.log("gatt.getPrimaryService() = success");
             progress_add_value(20);
             // Now get all the characteristics for this service
             primaryService.getCharacteristics().then(theCharacteristics => {   
