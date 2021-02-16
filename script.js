@@ -754,7 +754,7 @@ function connectToGATT(device, nTries){
     progress_set_value(5);
 
     return device.gatt.connect().then(gattServer => {
-       
+
         bleConnected(gattServer);
         progress_add_value(15);            
 
@@ -785,9 +785,10 @@ function connectToGATT(device, nTries){
             });
 
         }).catch(error => {
-            console.log("Error: connectToGATT->getPrimaryService(), reconnecting:", nTries);
+            console.log("Error: connectToGATT->getPrimaryService(), reconnecting:", nTries, error);
+            console.log(gattServer);
             disconnectBLEService();
-            setTimeout(()=>connectToGATT(device, nTries), 200); // slight delay to retry            
+            setTimeout(()=>connectToGATT(device, nTries), 500); // slight delay to retry            
             });
                 
     }).catch(error => {
