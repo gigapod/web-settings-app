@@ -768,18 +768,19 @@ function connectToBLEService() {
                 primaryService.getCharacteristics().then(theCharacteristics => {                
 
                     // Add the characteristics to the property sheet
-                    // The adds are async - so use promises and then
-                    // once everything is added, show the props UX all at once.
-                    const promises=[];
-                    for(const aChar of theCharacteristics){
-                        promises.push(addPropertyToSystem(aChar));
-                    }
+                    // The adds are async - so use promises, chaining everything
+                    // together
+
                     progress_add_value(5);
                     progressInc = 70./theCharacteristics.length; // for updates in promises
-                    Promise.all(promises).then((results)=>{
-                        renderProperties(); // build and display prop UX
-                        
-                    });
+
+                    // TESTING Chaining
+                    let chain = Promise.resolve();
+
+                    for(const aChar of theCharacteristics){                    
+                        chain = chain.then(()=>addPropertyToSystem(aChar));
+                    }
+                    chain.then(() =>renderProperties());                    
 
                 }).catch(error => {
                     console.log("getCharacteristics Error: " + error);
