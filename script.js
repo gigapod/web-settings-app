@@ -727,6 +727,61 @@ function endConnecting(success){
     }
     console.log("Properties Load Time:", Date.now()-debugLoadTime);
 }
+function connectToGATT(device, nTries){
+
+    if(nTries<1){
+        console.log("Error connecting GATT server on device");
+        alert("Unable to connect with the BLE GATT server. Disconnecting.");
+        endConnecting(false);
+        return;
+    }
+    nTries--;
+
+    progress_set_value(5);
+    console.log("IN Connect to Gatt");
+    return device.gatt.connect().then(gattServer => {
+            
+            console.log("Connected");
+            bleConnected(gattServer);
+            progress_add_value(15);            
+
+            // Connect to our target Service 
+            gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
+
+                progress_add_value(20);
+                // Now get all the characteristics for this service
+                primaryService.getCharacteristics().then(theCharacteristics => {   
+                    // Add the characteristics to the property sheet
+                    // The adds are async - so use promises, chaining everything
+                    // together
+
+                    progress_add_value(5);
+                    progressInc = 70./theCharacteristics.length; // for updates in promises
+
+                    // Chain together
+                    let chain = Promise.resolve();
+                    for(const aChar of theCharacteristics){                    
+                        chain = chain.then(()=>addPropertyToSystem(aChar));
+                    }
+                    chain.then(() =>renderProperties());       
+
+                }).catch(error => {
+                    console.log("Error: connectToGATT->getCharacteristics(), interation:", nTries);
+                    connectToGATT(device, nTries);
+
+                });
+
+            }).catch(error => {
+                console.log("Error: connectToGATT->getPrimaryService(), interation:", nTries);
+                connectToGATT(device, nTries);
+
+            });
+        }).catch(error => {
+            console.log("Error: connectToGATT->device.connect(), interation:", nTries);
+            connectToGATT(device, nTries);
+        });
+}
+
 function connectToBLEService() {
 
     // is ble supported?
@@ -755,6 +810,16 @@ function connectToBLEService() {
         progress_set_value(5);
         device.addEventListener('gattserverdisconnected', onDisconnected);
 
+        ///////////////////////////////////
+        // TODO:
+        //   Need to throw this into a seperate, async function and do:
+        //     - Make this call to connect and everything that follows
+        //     - do the await thing, or chain some error handling on this
+        //       so you can do retries -- and handle whe the gatt connection
+        //       drops during initial setup. 
+        ////////////////////////////////////
+        connectToGATT(device, 3);
+        /*
         return device.gatt.connect().then(gattServer => {
             
             bleConnected(gattServer);
@@ -774,9 +839,8 @@ function connectToBLEService() {
                     progress_add_value(5);
                     progressInc = 70./theCharacteristics.length; // for updates in promises
 
-                    // TESTING Chaining
+                    // Chain together
                     let chain = Promise.resolve();
-
                     for(const aChar of theCharacteristics){                    
                         chain = chain.then(()=>addPropertyToSystem(aChar));
                     }
@@ -798,7 +862,7 @@ function connectToBLEService() {
             console.log(error);
             alert("Unable to connect with the BLE settings service. Disconnecting.");
             endConnecting(false);
-        });
+        });*/
                 
     }).catch(error => {
         console.log(error);
