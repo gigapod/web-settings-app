@@ -781,19 +781,19 @@ function connectToGATT(device, nTries){
                 chain.then(() =>renderProperties());       
 
             }).catch(error => {
-                console.log("Error: connectToGATT->getCharacteristics(), interation:", nTries, error);
+                console.log("Error: connectToGATT->getCharacteristics(), reconnecting: ", nTries, error);
                 disconnectBLEService();
                 connectToGATT(device, nTries);
             });
 
         }).catch(error => {
-            console.log("Error: connectToGATT->getPrimaryService(), interation:", nTries, error);
+            console.log("Error: connectToGATT->getPrimaryService(), reconnecting:", nTries, error);
             disconnectBLEService();
             connectToGATT(device, nTries);
         });
                 
     }).catch(error => {
-        console.log("Error: connectToGATT->device.connect(), interation:", nTries, error);
+        console.log("Error: connectToGATT->device.connect(), reconnecting:", nTries, error);
         connectToGATT(device, nTries);
     });
 }
