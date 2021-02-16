@@ -402,5 +402,6 @@ a:hover {
 #myBar {
   width: 1%;
   height: 3px;
-  background-color: green;
+  background-color: #0B1EDF;
+;
 }
