@@ -667,6 +667,7 @@ function addPropertyToSystem(bleCharacteristic){
 //--------------------------------------------------------------------------------------
 
 let theGattServer = null;
+let isConnecting = false;
 
 function disconnectBLEService(){
 
@@ -691,6 +692,9 @@ function bleConnected(gattServer){
 // disconnect event handler.
 function onDisconnected(){
 
+    if(isConnecting){
+        return;
+    }
     document.getElementById("connect").innerHTML ="Connect To " + deviceName;
 
     // Delete our properties....
@@ -709,10 +713,12 @@ function startConnecting(){
     button.style.cursor = "not-allowed";  
 
     progress_start();
+    isConnecting=true;
 
 }
 function endConnecting(success){ 
 
+    isConnecting=false;
     document.body.style.cursor = "default";
     let button= document.getElementById("connect");
     button.style.fontStyle ='';
@@ -773,12 +779,14 @@ function connectToGATT(device, nTries){
 
                 }).catch(error => {
                     console.log("Error: connectToGATT->getCharacteristics(), interation:", nTries);
+                    disconnectBLEService();
                     connectToGATT(device, nTries);
 
                 });
 
             }).catch(error => {
-                console.log("Error: connectToGATT->getPrimaryService(), interation:", nTries);
+                console.log("Error: connectToGATT->getPrimaryService(), interation:", nTries, error);
+                disconnectBLEService();
                 connectToGATT(device, nTries);
 
             });
