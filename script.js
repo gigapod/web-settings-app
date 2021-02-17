@@ -776,16 +776,29 @@ function connectToGATT(device, nTries){
     nTries--;
 
     progressBar.set_value(5);
-        console.log("gatt.connnect() = calling");
+
     return device.gatt.connect().then(gattServer => {
 
         bleConnected(gattServer);
         progressBar.add_value(15);
 
+        // On Windows - the get service call hangs sometimes. To catch
+        // this add a timer to catch the hang
+
+        let watchdog = window.setTimeout(()=> {
+            // okay, system is hung ..
+            console.log("Error: getPrimaryService() has hung");
+            messageBox.showError("The bluetooth service is not responding. Resetting the application connection...", false);
+            window.setTimeout(()=>window.location.reload(false), 4000);
+
+        }, 20000);
         // Connect to our target Service 
-        console.log("gatt.connnect() = success");
+
         return gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
-            console.log("gatt.getPrimaryService() = success");
+
+            // kill watchdog
+            window.clearTimeout(watchdog);
+
             progressBar.add_value(20);
             // Now get all the characteristics for this service
             primaryService.getCharacteristics().then(theCharacteristics => {   
@@ -805,20 +818,23 @@ function connectToGATT(device, nTries){
 
             }).catch(error => {
                 console.log("Error: connectToGATT->getCharacteristics(), reconnecting: ", nTries);
+                messageBox.showWarning("Having trouble accessing the device properties. Retrying ...");
                 disconnectBLEService();
-                setTimeout(()=>connectToGATT(device, nTries), 200); // slight delay to retry
+                setTimeout(()=>connectToGATT(device, nTries), 200);
             });
 
         }).catch(error => {
             console.log("Error: connectToGATT->getPrimaryService(), reconnecting:", nTries, error);
             console.log(gattServer);
             disconnectBLEService();
-            setTimeout(()=>connectToGATT(device, nTries), 500); // slight delay to retry            
+            messageBox.showWarning("Having trouble accessing bluetooth service. Retrying ...");
+            setTimeout(()=>connectToGATT(device, nTries), 200);
             });
                 
     }).catch(error => {
         console.log("Error: connectToGATT->device.connect(), reconnecting:", nTries);
-        setTimeout(()=>connectToGATT(device, nTries), 200); // slight delay to retry                    
+        messageBox.showWarning("Having trouble accessing bluetooth device. Retrying ...");
+        setTimeout(()=>connectToGATT(device, nTries), 200);
     });
 }
 
@@ -826,7 +842,7 @@ function connectToBLEService() {
 
     // is ble supported?
     if(typeof navigator.bluetooth == "undefined" ){
-        alert(["Bluetooth is not available in this browser.", "Only Chrome-based browers support Bluetooth"]);
+        messageBox.showWarning("Bluetooth is not available in this browser. Only Chrome-based browers support Bluetooth connections.");
         return;
     }
 
@@ -860,6 +876,7 @@ function connectToBLEService() {
                 
     }).catch(error => {
         console.log(error);
+        messageBox.showWarning("Connection to bluetooth device cancelled.");
        // alert("Unable to access with browsers BLE system. Disconnecting.");
         endConnecting(false);
     });
