@@ -5,7 +5,7 @@
   	<title>SparkFun BLE Settings App</title>
 
  <style type="text/css">
- * {
+ 	* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -264,7 +264,7 @@ button {
 }
 
 .settings .date-prop {
-  position: relative;a
+  position: relative;
   width: 100%;
   height: calc(65px - 10px);
   background: rgba(255, 255, 255, 0.08);
@@ -409,9 +409,45 @@ a:hover {
 #myBar {
   width: 1%;
   height: 3px;
-  background-color: green;
-}	
- 	
+  background-color: #0B1EDF;
+}
+.alert-box {
+    font-family: "Arial";
+    padding: 18px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    border-radius: 10px;  
+    visibility: hidden;
+    opacity: 0;
+    font-size: 1.2rem;
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    margin:auto;
+    width: 70%;
+}
+.alert-failure {
+    color: #a94442;
+    background-color: #ffbebe;
+    border-color: #ebccd1;
+}
+
+.alert-box.show{
+    visibility: visible;
+    opacity: 1;
+    transition: opacity .5s linear;
+}
+.alert-box.hide{
+    visibility: hidden;
+    opacity: 0;
+    transition: visibility 0s .5s,opacity .5s linear;
+} 
+.alert-warning {
+    color: #8a8d3b;
+    background-color: #fcf8a3;
+    border-color: #faebcc;
+}
  </style>
  	<!-- Add some branding -->
 	<a class="sparkfun-corner" href="https://sparkfun.com" title="SparkFun Electronics" target="_blank">
@@ -433,6 +469,8 @@ a:hover {
 	<div class="settings" id="settings-container">
 	</div>
 </div>
+ <div class="alert-box alert-failure hide" id="message-error">Failure Alert</div>
+ <div class="alert-box alert-warning hide" id="message-warning">Warning Alert</div>  
 
 <!-- javascript -->
 <script type="text/javascript">
@@ -480,25 +518,49 @@ function setDeviceName(name){
 
 let debugLoadTime=0;
 
-// progress bar
-let progressInc = 1;
-function progress_set_value(value){
-    document.getElementById("myBar").style.width=value + "%";
+const progressBar = {
+    increment: 1,
+    set_value: function(value){
+        document.getElementById("myBar").style.width=value + "%";
+    },
+    add_value: function(value){
+        let element =  document.getElementById("myBar");
+        element.style.width = (parseInt(element.style.width)+value) + "%";
+    },
+    start: function(){
+        this.set_value(0);
+        document.getElementById("myProgress").style.display="flex";
+    },
+    end: function(){
+        document.getElementById("myProgress").style.display="none";
+    }
+};
 
-}
-function progress_add_value(value){
+const messageBox = {
 
-   let element =  document.getElementById("myBar");
-   element.style.width = (parseInt(element.style.width)+value) + "%";
+    msg_error : document.querySelector("#message-error"),
+    msg_warning : document.querySelector("#message-warning"),
 
-}
-function progress_start(){
-
-    progress_set_value(0);
-    document.getElementById("myProgress").style.display="flex";
-}
-function progress_end(){
-    document.getElementById("myProgress").style.display="none";    
+    _show_msg : function(msg, message, temporary){
+        msg.innerHTML = message;
+        msg.classList.replace("hide", "show");
+        if(temporary)
+            window.setTimeout(() =>this._hide_msg(msg), 4000);
+        
+    },
+    _hide_msg : function(msg){
+        msg.classList.replace("show", "hide");
+    },
+    showError: function(message, temporary=true){
+        this._show_msg(this.msg_error, message, temporary);
+    },
+    showWarning: function(message, temporary=true){
+        this._show_msg(this.msg_warning, message, temporary);
+    },
+    hideMessages: function(){
+        this._hide_msg(this.msg_error);
+        this._hide_msg(this.msg_warning);
+    } 
 }
 //---------------------------------------
 // property things
@@ -1036,7 +1098,7 @@ async function renderProperties(){
     for(const aProp of currentProperties){
         let result = await aProp.init();
     }
-    progress_set_value(100);
+    progressBar.set_value(100);
     showProperties();
     endConnecting(true);
 
@@ -1087,7 +1149,7 @@ function addPropertyToSystem(bleCharacteristic){
                     iPos = property.processBlk(blkType, value , iPos);
                 }
                 currentProperties.push(property);
-                progress_add_value(progressInc);
+                progressBar.add_value(progressInc);
                 resolve(0);
             }).catch(error => {
                 console.log("readValue error: ", error);
@@ -1105,6 +1167,7 @@ function addPropertyToSystem(bleCharacteristic){
 //--------------------------------------------------------------------------------------
 
 let theGattServer = null;
+let isConnecting = false;
 
 function disconnectBLEService(){
 
@@ -1129,6 +1192,9 @@ function bleConnected(gattServer){
 // disconnect event handler.
 function onDisconnected(){
 
+    if(isConnecting){
+        return;
+    }
     document.getElementById("connect").innerHTML ="Connect To " + deviceName;
 
     // Delete our properties....
@@ -1146,17 +1212,19 @@ function startConnecting(){
     button.disabled=true;
     button.style.cursor = "not-allowed";  
 
-    progress_start();
+    progressBar.start();
+    isConnecting=true;
 
 }
 function endConnecting(success){ 
 
+    isConnecting=false;
     document.body.style.cursor = "default";
     let button= document.getElementById("connect");
     button.style.fontStyle ='';
     button.disabled=false;
     button.style.cursor = "auto";   
-    progress_end();
+    progressBar.end();
     if(success){
         // update button label
         document.getElementById("connect").innerHTML ="Disconnect From " + deviceName;
@@ -1165,11 +1233,97 @@ function endConnecting(success){
     }
     console.log("Properties Load Time:", Date.now()-debugLoadTime);
 }
+
+//------------------------------------------------------
+// connectToGATT()
+//
+// Will retry if the connection seqeunce fails - retries nTries.
+//
+// On failure, this routine will recurse on itself. 
+//
+function connectToGATT(device, nTries){
+
+    if(nTries<1){
+        console.log("Error connecting GATT server on device");
+        alert("Unable to connect with the BLE GATT server. Disconnecting.");
+        endConnecting(false);
+        return;
+    }
+    nTries--;
+
+    progressBar.set_value(5);
+
+    return device.gatt.connect().then(gattServer => {
+
+        bleConnected(gattServer);
+        progressBar.add_value(15);
+
+        // On Windows - the get service call hangs sometimes. To catch
+        // this add a timer to catch the hang
+
+        let watchdog = window.setTimeout(()=> {
+            // okay, system is hung ..
+            disconnectBLEService();
+            console.log("Error: getPrimaryService() has hung");
+            messageBox.showError("The bluetooth service is not responding. Resetting the application connection...", false);
+            window.setTimeout(()=>window.location.reload(false), 4000);
+
+        }, 15000);
+
+        let stillWorking = window.setTimeout(()=>messageBox.showWarning("Still trying to connect..."), 7500);
+        // Connect to our target Service 
+
+        return gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
+
+            // kill watchdog
+            window.clearTimeout(watchdog);
+            window.clearTimeout(stillWorking);
+
+            progressBar.add_value(20);
+            // Now get all the characteristics for this service
+            primaryService.getCharacteristics().then(theCharacteristics => {   
+                // Add the characteristics to the property sheet
+                // The adds are async - so use promises, chaining everything
+                // together
+
+                progressBar.add_value(5);
+                progressInc = 70./theCharacteristics.length; // for updates in promises
+
+                // Chain together
+                let chain = Promise.resolve();
+                for(const aChar of theCharacteristics){                    
+                    chain = chain.then(()=>addPropertyToSystem(aChar));
+                }
+                chain.then(() =>renderProperties());       
+
+            }).catch(error => {
+                console.log("Error: connectToGATT->getCharacteristics(), reconnecting: ", nTries);
+                messageBox.showWarning("Having trouble accessing the device properties. Retrying ...");
+                disconnectBLEService();
+                setTimeout(()=>connectToGATT(device, nTries), 200);
+            });
+
+        }).catch(error => {
+            console.log("Error: connectToGATT->getPrimaryService(), reconnecting:", nTries, error);
+            window.clearTimeout(watchdog);
+            window.clearTimeout(stillWorking);            
+            disconnectBLEService();
+            messageBox.showWarning("Having trouble accessing bluetooth service. Retrying ...");
+            setTimeout(()=>connectToGATT(device, nTries), 200);
+            });
+                
+    }).catch(error => {
+        console.log("Error: connectToGATT->device.connect(), reconnecting:", nTries);
+        messageBox.showWarning("Having trouble accessing bluetooth device. Retrying ...");
+        setTimeout(()=>connectToGATT(device, nTries), 200);
+    });
+}
+
 function connectToBLEService() {
 
     // is ble supported?
     if(typeof navigator.bluetooth == "undefined" ){
-        alert(["Bluetooth is not available in this browser.", "Only Chrome-based browers support Bluetooth"]);
+        messageBox.showWarning("Bluetooth is not available in this browser. Only Chrome-based browers support Bluetooth connections.");
         return;
     }
 
@@ -1190,56 +1344,21 @@ function connectToBLEService() {
         if(device.name)
             setDeviceName(device.name);
 
-        progress_set_value(5);
+        progressBar.set_value(5);
         device.addEventListener('gattserverdisconnected', onDisconnected);
 
-        return device.gatt.connect().then(gattServer => {
-            
-            bleConnected(gattServer);
-            progress_add_value(15);            
-
-            // Connect to our target Service 
-            gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
-
-                progress_add_value(20);
-                // Now get all the characteristics for this service
-                primaryService.getCharacteristics().then(theCharacteristics => {                
-
-                    // Add the characteristics to the property sheet
-                    // The adds are async - so use promises and then
-                    // once everything is added, show the props UX all at once.
-                    const promises=[];
-                    for(const aChar of theCharacteristics){
-                        promises.push(addPropertyToSystem(aChar));
-                    }
-                    progress_add_value(5);
-                    progressInc = 70./theCharacteristics.length; // for updates in promises
-                    Promise.all(promises).then((results)=>{
-                        renderProperties(); // build and display prop UX
-                        
-                    });
-
-                }).catch(error => {
-                    console.log("getCharacteristics Error: " + error);
-                    alert("Error communicating with device. Disconnecting.");
-                    endConnecting(false);
-                });
-
-
-            }).catch(error => {
-                console.log("getPrimaryService Error:" + error);
-                alert("Unable to connect with the BLE settings service. Disconnecting.");
-                endConnecting(false);
-            });
-        }).catch(error => {
-            console.log(error);
-            alert("Unable to connect with the BLE settings service. Disconnecting.");
-            endConnecting(false);
-        });
+        ///////////////////////////////////
+        // Connect to the GATT - 
+        // 
+        // GATT service connection is touchy on windoze. This routine inplements a retry
+        // strategy, trying 3 times to connect.
+        ////////////////////////////////////
+        connectToGATT(device, 3);
                 
     }).catch(error => {
         console.log(error);
-        alert("Unable to access with browsers BLE system. Disconnecting.");
+        messageBox.showWarning("Connection to bluetooth device cancelled.");
+       // alert("Unable to access with browsers BLE system. Disconnecting.");
         endConnecting(false);
     });
 
