@@ -793,12 +793,15 @@ function connectToGATT(device, nTries){
             window.setTimeout(()=>window.location.reload(false), 4000);
 
         }, 15000);
+
+        let stillWorking = window.setTimeout(()=>messageBox.showWarning("Still trying to connect..."), 7500);
         // Connect to our target Service 
 
         return gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
 
             // kill watchdog
             window.clearTimeout(watchdog);
+            window.clearTimeout(stillWorking);
 
             progressBar.add_value(20);
             // Now get all the characteristics for this service
@@ -828,6 +831,7 @@ function connectToGATT(device, nTries){
             console.log("Error: connectToGATT->getPrimaryService(), reconnecting:", nTries, error);
             console.log(gattServer);
             window.clearTimeout(watchdog);
+            window.clearTimeout(stillWorking);            
             disconnectBLEService();
             messageBox.showWarning("Having trouble accessing bluetooth service. Retrying ...");
             setTimeout(()=>connectToGATT(device, nTries), 200);
