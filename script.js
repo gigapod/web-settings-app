@@ -31,8 +31,8 @@ function textToData(text){ return textEncoder.encode(text);}
 	
 const targetID = 'settings-container';
 
-
 const currentProperties=[];
+
 let deviceName=kTargetServiceName;
 function setDeviceName(name){
     deviceName = name;
@@ -86,6 +86,7 @@ const messageBox = {
         this._hide_msg(this.msg_warning);
     } 
 }
+
 //---------------------------------------
 // property things
 //---------------------------------------
@@ -783,8 +784,34 @@ function connectToGATT(device, nTries){
         progressBar.add_value(15);
 
         // On Windows - the get service call hangs sometimes. To catch
-        // this add a timer to catch the hang
+        // this add a timer to catch the hang. Cascade warning and reset timers..
 
+        let watchdog = {
+            timer_id: 0,
+            start: (timeout) => {
+                // This thing cascades two timers
+                timer_id = setTimeout(()=>{
+                    // first warning
+                    messageBox.showWarning("Still trying to connect...");
+                    // set the reset timer
+                    timer_id = setTimeout(() =>{
+                        disconnectBLEService();
+                        console.log("Error: getPrimaryService() has hung");
+                        messageBox.showError("The bluetooth service is not responding. Resetting the application connection...", false);
+                        window.setTimeout(()=>window.location.reload(false), 4000);
+                    },timeout/2);
+                    console.log("error timer:", this.timer_id);
+                }, timeout/2);
+                console.log("warning error timer:", this.timer_id);                
+            },
+            cancel: () =>{
+                console.log("clear timer id:", this.timer_id);
+                clearTimeout(this.timer_id);
+            }
+        }; 
+
+        //TODO TODO: Chain this with the 'still trying timeout' maybe
+        /*
         let watchdog = window.setTimeout(()=> {
             // okay, system is hung ..
             disconnectBLEService();
@@ -795,13 +822,16 @@ function connectToGATT(device, nTries){
         }, 15000);
 
         let stillWorking = window.setTimeout(()=>messageBox.showWarning("Still trying to connect..."), 7500);
+        */
+        watchdog.start(15000);
         // Connect to our target Service 
 
         return gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
 
             // kill watchdog
-            window.clearTimeout(watchdog);
-            window.clearTimeout(stillWorking);
+            watchdog.cancel();
+            //window.clearTimeout(watchdog);
+            //window.clearTimeout(stillWorking);
 
             progressBar.add_value(20);
             // Now get all the characteristics for this service
