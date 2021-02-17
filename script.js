@@ -758,7 +758,26 @@ function endConnecting(success){
     }
     console.log("Properties Load Time:", Date.now()-debugLoadTime);
 }
-
+// For connectToGatt() - cascading timer obj
+const gattWatchdog = {
+    timer_id: 0,
+    start: (timeout) => {
+        // Let's cascade warning and reset timeouts
+        timer_id = setTimeout(()=>{
+            // first warning
+            messageBox.showWarning("Still trying to connect...");
+            
+            // set the reset timer
+            timer_id = setTimeout(() =>{
+                disconnectBLEService();
+                messageBox.showError("The bluetooth service is not responding. Resetting the application connection...", false);
+                // system is hung, reload page
+                window.setTimeout(()=>window.location.reload(false), 4000);
+            },timeout/2);
+        }, timeout/2);
+    },
+    cancel: () => clearTimeout(this.timer_id)
+}; 
 //------------------------------------------------------
 // connectToGATT()
 //
@@ -784,56 +803,19 @@ function connectToGATT(device, nTries){
         progressBar.add_value(15);
 
         // On Windows - the get service call hangs sometimes. To catch
-        // this add a timer to catch the hang. Cascade warning and reset timers..
+        // this create a watchdog obj that cascades timer - issues warnings and if
+        // timeout exceeded, reloads page
+        
+        gattWatchdog.start(15000);
 
-        let watchdog = {
-            timer_id: 0,
-            start: (timeout) => {
-                // This thing cascades two timers
-                timer_id = setTimeout(()=>{
-                    // first warning
-                    messageBox.showWarning("Still trying to connect...");
-                    // set the reset timer
-                    timer_id = setTimeout(() =>{
-                        disconnectBLEService();
-                        console.log("Error: getPrimaryService() has hung");
-                        messageBox.showError("The bluetooth service is not responding. Resetting the application connection...", false);
-                        window.setTimeout(()=>window.location.reload(false), 4000);
-                    },timeout/2);
-                    console.log("error timer:", this.timer_id);
-                }, timeout/2);
-                console.log("warning error timer:", this.timer_id);                
-            },
-            cancel: () =>{
-                console.log("clear timer id:", this.timer_id);
-                clearTimeout(this.timer_id);
-            }
-        }; 
-
-        //TODO TODO: Chain this with the 'still trying timeout' maybe
-        /*
-        let watchdog = window.setTimeout(()=> {
-            // okay, system is hung ..
-            disconnectBLEService();
-            console.log("Error: getPrimaryService() has hung");
-            messageBox.showError("The bluetooth service is not responding. Resetting the application connection...", false);
-            window.setTimeout(()=>window.location.reload(false), 4000);
-
-        }, 15000);
-
-        let stillWorking = window.setTimeout(()=>messageBox.showWarning("Still trying to connect..."), 7500);
-        */
-        watchdog.start(15000);
         // Connect to our target Service 
-
         return gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
 
             // kill watchdog
-            watchdog.cancel();
-            //window.clearTimeout(watchdog);
-            //window.clearTimeout(stillWorking);
+            gattWatchdog.cancel();
 
             progressBar.add_value(20);
+            
             // Now get all the characteristics for this service
             primaryService.getCharacteristics().then(theCharacteristics => {   
                 // Add the characteristics to the property sheet
@@ -851,23 +833,19 @@ function connectToGATT(device, nTries){
                 chain.then(() =>renderProperties());       
 
             }).catch(error => {
-                console.log("Error: connectToGATT->getCharacteristics(), reconnecting: ", nTries);
                 messageBox.showWarning("Having trouble accessing the device properties. Retrying ...");
                 disconnectBLEService();
                 setTimeout(()=>connectToGATT(device, nTries), 200);
             });
 
         }).catch(error => {
-            console.log("Error: connectToGATT->getPrimaryService(), reconnecting:", nTries, error);
-            window.clearTimeout(watchdog);
-            window.clearTimeout(stillWorking);            
+            gattWatchdog.cancel();            
             disconnectBLEService();
             messageBox.showWarning("Having trouble accessing bluetooth service. Retrying ...");
             setTimeout(()=>connectToGATT(device, nTries), 200);
-            });
+        });
                 
     }).catch(error => {
-        console.log("Error: connectToGATT->device.connect(), reconnecting:", nTries);
         messageBox.showWarning("Having trouble accessing bluetooth device. Retrying ...");
         setTimeout(()=>connectToGATT(device, nTries), 200);
     });
