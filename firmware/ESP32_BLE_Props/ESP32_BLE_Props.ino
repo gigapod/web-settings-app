@@ -27,7 +27,7 @@
 
 #define kTargetServiceUUID  "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 // Name of this app/service
-#define kTargetServiceName  "ESP32 App"
+#define kTargetServiceName  "ESP32 Thing"
 
 //--------------------------------------------------------------------------------------
 // Our Characteristic UUIDs - and yes, just made these up
@@ -350,7 +350,7 @@ BLECharacteristic * setupModeCharacteristic(BLEService *pService){
 
     return pChar;
 }
-
+char szName[24];
 //---------------------------------------------------------------------------------
 // Setup our system
 //---------------------------------------------------------------------------------
@@ -360,8 +360,12 @@ void setup() {
     Serial.begin(115200);
     Serial.println("Starting BLE work!");
 
+    uint64_t chipid = ESP.getEfuseMac(); // The chip ID is essentially its MAC address(length: 6 bytes).
+
+    snprintf(szName, sizeof(szName), "%s-%04X", kTargetServiceName, (uint16_t)(chipid & 0xFFFF));
+
     // Init BLE  - give it our device name.
-    BLEDevice::init(kTargetServiceName);
+    BLEDevice::init(szName);
 
     // Create our BLE Server - And add callback object (defined above)
     // The callback is used to keep track if a device is connected or not.
