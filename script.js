@@ -787,6 +787,7 @@ function connectToGATT(device, nTries){
 
         let watchdog = window.setTimeout(()=> {
             // okay, system is hung ..
+            disconnectBLEService();
             console.log("Error: getPrimaryService() has hung");
             messageBox.showError("The bluetooth service is not responding. Resetting the application connection...", false);
             window.setTimeout(()=>window.location.reload(false), 4000);
