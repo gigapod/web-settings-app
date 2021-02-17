@@ -16,7 +16,7 @@
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
 #define kTargetServiceUUID  "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define kTargetServiceName  "Artemis App"
+#define kTargetServiceName  "Artemis"
 
 //--------------------------------------------------------------------------------------
 // Our Characteristic UUIDs - and yes, just made these up
@@ -350,7 +350,20 @@ void blePeripheralDisconnectHandler(BLEDevice central) {
   deviceConnected = false;  
 }
 
+uint32_t getUID(void){
 
+// on an apollo3 system - (#define from our mbed build system)
+#ifdef TARGET_FAMILY_Apollo3
+
+    // if this is Artemis (ambiq apollo3 blue), a unique ID is in the CHIPID0 reg. ->0x40020004
+    uint32_t *pID = (uint32_t*)0x40020004;
+    return *pID;
+#else 
+
+    return 0;
+#endif
+}
+char szName[24];
 //---------------------------------------------------------------------------------
 // Setup our system
 //---------------------------------------------------------------------------------
@@ -374,8 +387,13 @@ void setup() {
     BLE.setEventHandler(BLEConnected, blePeripheralConnectHandler);
     BLE.setEventHandler(BLEDisconnected, blePeripheralDisconnectHandler);
 
+    uint32_t uid = getUID(); // get a unique ID.
+    snprintf(szName, sizeof(szName), "%s - %04X", kTargetServiceName, (uint16_t)(uid & 0xFFFF));
+    Serial.print("Device Name: "); Serial.println(szName);
+    
     // name the device
-    BLE.setLocalName(kTargetServiceName);
+    BLE.setLocalName(szName);
+
 
     // Setup service Characteristics
     setupBLECharacteristics(bleService);
