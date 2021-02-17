@@ -122,15 +122,31 @@ public:
 
     // -----------------------------------------------    
     // public API methods
-
-    static void add_bool(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
+    // -----------------------------------------------    
+    //
+    // General format of these routines:
+    //
+    // add<type>(characteristic, name [, property type specific parameters])
+    //
+    //   characteristic   - The BLE Characteristic to add property information to
+    //   name             - The human readable name of the property
+    //
+    //-------------------------------------------------------------------------
+    // addBool()
+    //
+    // Defines the characteristic as a "bool" property, representing an On or Off state.
+    //
+    static void addBool(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
         sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeBool);
     }
 
     //-------------------------------------------------------------------------
-    // add_int()  - With increment value
+    // addInt()  - With increment value
     //
-    static void add_int(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName, 
+    // Defines the characteristic as a "integer" property. The increment value is used
+    // by the property sheet for control step values    
+    //
+    static void addInt(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName, 
                         uint32_t increment){
 
         uint8_t dBuffer[kSFBLEBufferSize] = {0};
@@ -147,24 +163,32 @@ public:
         sfBLEProperties::set_descriptor(bleChar, dBuffer, iNext+sizeof(increment));
     } 
     //-------------------------------------------------------------------------
-    // add_int()
+    // addInt()
     //
-    // Increment is set to 1
-    static void add_int(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
-        sfBLEProperties::add_int(bleChar, strName, 1);
+    // Defines the characteristic as a "integer" property. The increment value is 1.
+    //
+    static void addInt(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
+        sfBLEProperties::addInt(bleChar, strName, 1);
 
     } 
 
     //-------------------------------------------------------------------------
-    static void add_string(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
+    // addString()
+    //
+    // Defines the characteristic as a "string" property. 
+    //
+    static void addString(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
         sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeText);
     } 
     //-------------------------------------------------------------------------
-    // add_float()  - With increment value
-
+    // addFloat()  - With increment value
+    //
+    // Defines the characteristic as a "float" property. The increment value is used
+    // by the property sheet for control step values. 
+    //
     // Note, this only goes to 5 decimal places to manage float math
     //
-    static void add_float(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName, 
+    static void addFloat(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName, 
                         float increment){
 
         uint8_t dBuffer[kSFBLEBufferSize] = {0};
@@ -182,26 +206,49 @@ public:
         sfBLEProperties::set_descriptor(bleChar, dBuffer, iNext+sizeof(increment));
     }
     //-------------------------------------------------------------------------
-    // add_float()
+    // addFloat() 
     //
-    // Default increment - .01
+    // Defines the characteristic as a "float" property. The increment value is 0.01
     //
-    static void add_float(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
-        sfBLEProperties::add_float(bleChar, strName, 0.01);
+    static void addFloat(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
+        sfBLEProperties::addFloat(bleChar, strName, 0.01);
     } 
 
     //-------------------------------------------------------------------------
-    static void add_date(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
+    //-------------------------------------------------------------------------
+    // addDate() 
+    //
+    // Defines the characteristic as a "date" property. 
+    //
+    // Date values are strings with the format of: "YYYY-MM-DD"  
+    //
+    // Invalid formatting will prevent property date display
+    //
+    static void addDate(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
         sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeDate);
     } 
 
     //-------------------------------------------------------------------------
-    static void add_time(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
+    // addTime() 
+    //
+    // Defines the characteristic as a "time" property. 
+    //
+    // Time values are strings with the format of: "HH:MM"  
+    //
+    // Invalid formatting will prevent property time display
+    //
+    static void addTime(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName){
         sfBLEProperties::add_basic(bleChar, strName, kSFEPropTypeTime);
     } 
 
     //-------------------------------------------------------------------------
-    static void add_range(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName,  
+    // addRange() 
+    //
+    // Defines the characteristic as a "range" property. 
+    //
+    // Range is presented as a slider in the property sheet. 
+    //
+    static void addRange(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName,  
                       sfe_ble_const uint32_t& vMin, sfe_ble_const uint32_t& vMax){
 
         uint8_t dBuffer[kSFBLEBufferSize] = {0};
@@ -220,11 +267,15 @@ public:
 	}
 
     //-------------------------------------------------------------------------
+    // addSelect()
+    //
+    // Defines the characteristic as a "select" property. 
+    //
     // Add a select property - a property that has a list of possible values.
     //
     // The value options are contained in a string, seperated by "|" characters.
     //
-    static void add_select(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName,
+    static void addSelect(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName,
                            sfe_ble_const char *strOptions){
 
         uint8_t dBuffer[kSFBLEBufferSize] = {0};
@@ -245,14 +296,14 @@ public:
 
     }
     //-------------------------------------------------------------------------
-    // add_title()
+    // addTitle()
     //
     // Add a title before the next property. This value is stashed until the next
     // add property call, when the value is encoded into that properties 
     // descriptor data block.
     //
     // Any string longer that kSFBLEMaxString is clipped. 
-    static void add_title(sfe_ble_const char *strTitle){
+    static void addTitle(sfe_ble_const char *strTitle){
 
         if(!strTitle || !strlen(strTitle))
             return;

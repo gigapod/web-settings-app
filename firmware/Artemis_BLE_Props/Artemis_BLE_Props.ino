@@ -256,22 +256,22 @@ void modeUpdateCB(BLEDevice central, BLECharacteristic theChar){
 void setupBLECharacteristics(BLEService& theService){
 
     // The enabled characteristic --- add it as a boolean property
-    BLEProperties.add_bool(bleCharEnabled, "Device Enabled"); // setup property descriptor    
+    BLEProperties.addBool(bleCharEnabled, "Device Enabled"); // setup property descriptor    
 
     theService.addCharacteristic(bleCharEnabled);  
     bleCharEnabled.setValue(bIsEnabled);
     bleCharEnabled.setEventHandler(BLEWritten, enbabledUpdateCB);
 
     // The date characteristic with title
-    BLEProperties.add_title("Event Details");    
-    BLEProperties.add_date(bleCharDate, "Start Date" ); // setup property descriptor     
+    BLEProperties.addTitle("Event Details");    
+    BLEProperties.addDate(bleCharDate, "Start Date" ); // setup property descriptor     
 
     theService.addCharacteristic(bleCharDate);  
     bleCharDate.setValue(strDate);
     bleCharDate.setEventHandler(BLEWritten, dateUpdateCB); 
 
     // The time characteristic
-    BLEProperties.add_time(bleCharTime, "Start Time"); // setup property descriptor                
+    BLEProperties.addTime(bleCharTime, "Start Time"); // setup property descriptor                
 
     theService.addCharacteristic(bleCharTime);  
     bleCharTime.setValue(strTime);
@@ -279,29 +279,29 @@ void setupBLECharacteristics(BLEService& theService){
 
 
     // The BaudRate characteristic with title
-    BLEProperties.add_title("Device Settings");
+    BLEProperties.addTitle("Device Settings");
 
     // NOTE: Can call add_int() with or without an increment value. 
     // No increment - defaults to 1
-    //BLEProperties.add_int(bleCharBaudRate, "Baud Rate"); // setup property descriptor        
+    //BLEProperties.addInt(bleCharBaudRate, "Baud Rate"); // setup property descriptor        
     
     // Set to an increment value of 100
-    BLEProperties.add_int(bleCharBaudRate, "Baud Rate", 100); // setup property descriptor    
+    BLEProperties.addInt(bleCharBaudRate, "Baud Rate", 100); // setup property descriptor    
 
     theService.addCharacteristic(bleCharBaudRate);  
     bleCharBaudRate.setValue(baudRate);
     bleCharBaudRate.setEventHandler(BLEWritten, buadRateUpdateCB);
 
     // The Name characteristic
-    BLEProperties.add_string(bleCharName, "Device Name"); // setup property descriptor        
+    BLEProperties.addString(bleCharName, "Device Name"); // setup property descriptor        
 
     theService.addCharacteristic(bleCharName);  
     bleCharName.setValue(strName);
     bleCharName.setEventHandler(BLEWritten, nameUpdateCB);    
         
     // The Sample Rate characteristic with title
-    BLEProperties.add_title("Sensor Settings");    
-    BLEProperties.add_range(bleCharSampleRate, "Sample Rate (sec)", sampleRateMin, sampleRateMax); // setup property descriptor            
+    BLEProperties.addTitle("Sensor Settings");    
+    BLEProperties.addRange(bleCharSampleRate, "Sample Rate (sec)", sampleRateMin, sampleRateMax); // setup property descriptor            
 
     theService.addCharacteristic(bleCharSampleRate);
     bleCharSampleRate.setValue(sampleRate);     
@@ -310,10 +310,10 @@ void setupBLECharacteristics(BLEService& theService){
     // The Offset (float) characteristic
 
     // add_float() - default, with no increment defaults to .01 increment
-    // BLEProperties.add_float(bleCharOffset, "Offset Bias"); // setup property descriptor  
+    // BLEProperties.addFloat(bleCharOffset, "Offset Bias"); // setup property descriptor  
 
     // Set a increment value of .001
-    BLEProperties.add_float(bleCharOffset, "Offset Bias", 0.001); // setup property descriptor  
+    BLEProperties.addFloat(bleCharOffset, "Offset Bias", 0.001); // setup property descriptor  
 
     // Set the increment value of .001
     theService.addCharacteristic(bleCharOffset);  
@@ -321,7 +321,7 @@ void setupBLECharacteristics(BLEService& theService){
     bleCharOffset.setEventHandler(BLEWritten, offsetUpdateCB);  
 
     // The Mode (select type) characteristic
-    BLEProperties.add_select(bleCharMode, "Active Mode", "Constant|Stepper|Chirp"); // setup property descriptor  
+    BLEProperties.addSelect(bleCharMode, "Active Mode", "Constant|Stepper|Chirp"); // setup property descriptor  
 
     theService.addCharacteristic(bleCharMode);  
     bleCharMode.setValue(strMode);

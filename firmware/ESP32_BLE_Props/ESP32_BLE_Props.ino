@@ -392,53 +392,53 @@ void setup() {
     BLECharacteristic *pChar;
 
     pChar = setupEnabledCharacteristic(pService);
-    BLEProperties.add_bool(pChar, "Device Enabled");
+    BLEProperties.addBool(pChar, "Device Enabled");
 
     // Event Details Group
     pChar = setupDateCharacteristic(pService);
-    BLEProperties.add_title("Event Details");
-    BLEProperties.add_date(pChar, "Start Date");
+    BLEProperties.addTitle("Event Details");
+    BLEProperties.addDate(pChar, "Start Date");
 
     pChar = setupTimeCharacteristic(pService); 
-    BLEProperties.add_time(pChar, "Start Time");
+    BLEProperties.addTime(pChar, "Start Time");
 
     // Device Settings
     pChar = setupBaudCharacteristic(pService);
-    BLEProperties.add_title("Device Settings");   
+    BLEProperties.addTitle("Device Settings");   
     // NOTE: Can call add_int() with or without an increment value. 
     
     // No increment - defaults to 1
-    //BLEProperties.add_int(pChar, "Baud Rate"); // setup property descriptor        
+    //BLEProperties.addInt(pChar, "Baud Rate"); // setup property descriptor        
 
     // Set to an increment value of 100
-    BLEProperties.add_int(pChar, "Baud Rate", 100);  
+    BLEProperties.addInt(pChar, "Baud Rate", 100);  
 
     // WiFi Settings
     pChar = setupSSIDCharacteristic(pService);
-    BLEProperties.add_title("WiFi Settings");        
-    BLEProperties.add_string(pChar, "SSID");
+    BLEProperties.addTitle("WiFi Settings");        
+    BLEProperties.addString(pChar, "SSID");
 
     pChar =  setupPasswordCharacteristic(pService);    
-    BLEProperties.add_string(pChar, "Password");
+    BLEProperties.addString(pChar, "Password");
 
     // Sensor Settings 
     pChar = setupSampleRateCharacteristic(pService);
-    BLEProperties.add_title("Sensor Settings");            
-    BLEProperties.add_range(pChar, "Sample Rate (sec)", sampleRateMin, sampleRateMax);    
+    BLEProperties.addTitle("Sensor Settings");            
+    BLEProperties.addRange(pChar, "Sample Rate (sec)", sampleRateMin, sampleRateMax);    
 
     pCharOffset = setupOffsetCharacteristic(pService);
 
     // add_float() - default, with no increment defaults to .01 increment
-    // BLEProperties.add_float(pCharOffset, "Offset Bias");
+    // BLEProperties.addFloat(pCharOffset, "Offset Bias");
 
     // Set the increment value of .001
-    BLEProperties.add_float(pCharOffset, "Offset Bias", 0.001);    
+    BLEProperties.addFloat(pCharOffset, "Offset Bias", 0.001);    
 
 
 
     pChar = setupModeCharacteristic(pService);
     // The Mode (select type) characteristic
-    BLEProperties.add_select(pChar, "Active Mode", "Constant|Stepper|Chirp"); 
+    BLEProperties.addSelect(pChar, "Active Mode", "Constant|Stepper|Chirp"); 
 
     // >> Notifications <<
     //
