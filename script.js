@@ -42,26 +42,25 @@ function setDeviceName(name){
 
 let debugLoadTime=0;
 
-// progress bar
-let progressInc = 1;
-function progress_set_value(value){
-    document.getElementById("myBar").style.width=value + "%";
 
-}
-function progress_add_value(value){
+const progressBar = {
+    increment: 1,
+    set_value: function(value){
+        document.getElementById("myBar").style.width=value + "%";
+    },
+    add_value: function(value){
+        let element =  document.getElementById("myBar");
+        element.style.width = (parseInt(element.style.width)+value) + "%";
+    },
+    start: function(){
+        this.set_value(0);
+        document.getElementById("myProgress").style.display="flex";
+    },
+    end: function(){
+        document.getElementById("myProgress").style.display="none";
+    }
+};
 
-   let element =  document.getElementById("myBar");
-   element.style.width = (parseInt(element.style.width)+value) + "%";
-
-}
-function progress_start(){
-
-    progress_set_value(0);
-    document.getElementById("myProgress").style.display="flex";
-}
-function progress_end(){
-    document.getElementById("myProgress").style.display="none";    
-}
 //---------------------------------------
 // property things
 //---------------------------------------
@@ -598,7 +597,7 @@ async function renderProperties(){
     for(const aProp of currentProperties){
         let result = await aProp.init();
     }
-    progress_set_value(100);
+    progressBar.set_value(100);
     showProperties();
     endConnecting(true);
 
@@ -649,7 +648,7 @@ function addPropertyToSystem(bleCharacteristic){
                     iPos = property.processBlk(blkType, value , iPos);
                 }
                 currentProperties.push(property);
-                progress_add_value(progressInc);
+                progressBar.add_value(progressInc);
                 resolve(0);
             }).catch(error => {
                 console.log("readValue error: ", error);
@@ -712,7 +711,7 @@ function startConnecting(){
     button.disabled=true;
     button.style.cursor = "not-allowed";  
 
-    progress_start();
+    progressBar.start();
     isConnecting=true;
 
 }
@@ -724,7 +723,7 @@ function endConnecting(success){
     button.style.fontStyle ='';
     button.disabled=false;
     button.style.cursor = "auto";   
-    progress_end();
+    progressBar.end();
     if(success){
         // update button label
         document.getElementById("connect").innerHTML ="Disconnect From " + deviceName;
@@ -751,25 +750,25 @@ function connectToGATT(device, nTries){
     }
     nTries--;
 
-    progress_set_value(5);
+    progressBar.set_value(5);
         console.log("gatt.connnect() = calling");
     return device.gatt.connect().then(gattServer => {
 
         bleConnected(gattServer);
-        progress_add_value(15);            
+        progressBar.add_value(15);
 
         // Connect to our target Service 
         console.log("gatt.connnect() = success");
         return gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
             console.log("gatt.getPrimaryService() = success");
-            progress_add_value(20);
+            progressBar.add_value(20);
             // Now get all the characteristics for this service
             primaryService.getCharacteristics().then(theCharacteristics => {   
                 // Add the characteristics to the property sheet
                 // The adds are async - so use promises, chaining everything
                 // together
 
-                progress_add_value(5);
+                progressBar.add_value(5);
                 progressInc = 70./theCharacteristics.length; // for updates in promises
 
                 // Chain together
@@ -823,7 +822,7 @@ function connectToBLEService() {
         if(device.name)
             setDeviceName(device.name);
 
-        progress_set_value(5);
+        progressBar.set_value(5);
         device.addEventListener('gattserverdisconnected', onDisconnected);
 
         ///////////////////////////////////
@@ -836,7 +835,7 @@ function connectToBLEService() {
                 
     }).catch(error => {
         console.log(error);
-        alert("Unable to access with browsers BLE system. Disconnecting.");
+       // alert("Unable to access with browsers BLE system. Disconnecting.");
         endConnecting(false);
     });
 
