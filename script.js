@@ -42,7 +42,6 @@ function setDeviceName(name){
 
 let debugLoadTime=0;
 
-
 const progressBar = {
     increment: 1,
     set_value: function(value){
@@ -61,6 +60,32 @@ const progressBar = {
     }
 };
 
+const messageBox = {
+
+    msg_error : document.querySelector("#message-error"),
+    msg_warning : document.querySelector("#message-warning"),
+
+    _show_msg : function(msg, message, temporary){
+        msg.innerHTML = message;
+        msg.classList.replace("hide", "show");
+        if(temporary)
+            window.setTimeout(() =>this._hide_msg(msg), 4000);
+        
+    },
+    _hide_msg : function(msg){
+        msg.classList.replace("show", "hide");
+    },
+    showError: function(message, temporary=true){
+        this._show_msg(this.msg_error, message, temporary);
+    },
+    showWarning: function(message, temporary=true){
+        this._show_msg(this.msg_warning, message, temporary);
+    },
+    hideMessages: function(){
+        this._hide_msg(this.msg_error);
+        this._hide_msg(this.msg_warning);
+    } 
+}
 //---------------------------------------
 // property things
 //---------------------------------------
@@ -714,6 +739,7 @@ function startConnecting(){
     progressBar.start();
     isConnecting=true;
 
+    messageBox.showError("ERROR ERROR");
 }
 function endConnecting(success){ 
 

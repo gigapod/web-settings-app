@@ -403,5 +403,41 @@ a:hover {
   width: 1%;
   height: 3px;
   background-color: #0B1EDF;
-;
+}
+.alert-box {
+    font-family: "Arial";
+    padding: 18px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    border-radius: 10px;  
+    visibility: hidden;
+    opacity: 0;
+    font-size: 1.2rem;
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    margin:auto;
+    width: 70%;
+}
+.alert-failure {
+    color: #a94442;
+    background-color: #ffbebe;
+    border-color: #ebccd1;
+}
+
+.alert-box.show{
+    visibility: visible;
+    opacity: 1;
+    transition: opacity .5s linear;
+}
+.alert-box.hide{
+    visibility: hidden;
+    opacity: 0;
+    transition: visibility 0s .5s,opacity .5s linear;
+} 
+.alert-warning {
+    color: #8a8d3b;
+    background-color: #fcf8a3;
+    border-color: #faebcc;
 }
