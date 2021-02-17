@@ -769,7 +769,7 @@ function connectToGATT(device, nTries){
 
     if(nTries<1){
         console.log("Error connecting GATT server on device");
-        alert("Unable to connect with the BLE GATT server. Disconnecting.");
+        messageBox.showError("Unable to connect with the BLE GATT server. Disconnecting.");
         endConnecting(false);
         return;
     }
@@ -882,7 +882,6 @@ function connectToBLEService() {
     }).catch(error => {
         console.log(error);
         messageBox.showWarning("Connection to bluetooth device cancelled.");
-       // alert("Unable to access with browsers BLE system. Disconnecting.");
         endConnecting(false);
     });
 
