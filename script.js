@@ -792,7 +792,7 @@ function connectToGATT(device, nTries){
             messageBox.showError("The bluetooth service is not responding. Resetting the application connection...", false);
             window.setTimeout(()=>window.location.reload(false), 4000);
 
-        }, 20000);
+        }, 15000);
         // Connect to our target Service 
 
         return gattServer.getPrimaryService(kTargetServiceUUID).then(primaryService => {
