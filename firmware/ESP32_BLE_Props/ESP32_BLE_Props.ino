@@ -350,7 +350,7 @@ BLECharacteristic * setupModeCharacteristic(BLEService *pService){
 
     return pChar;
 }
-char szName[24];
+char szName[24]; // name storage
 //---------------------------------------------------------------------------------
 // Setup our system
 //---------------------------------------------------------------------------------
@@ -360,9 +360,12 @@ void setup() {
     Serial.begin(115200);
     Serial.println("Starting BLE work!");
 
+    // Build a unique name for this device - based on esp32 chip ID
+
     uint64_t chipid = ESP.getEfuseMac(); // The chip ID is essentially its MAC address(length: 6 bytes).
 
-    snprintf(szName, sizeof(szName), "%s-%04X", kTargetServiceName, (uint16_t)(chipid & 0xFFFF));
+    snprintf(szName, sizeof(szName), "%s %04X", kTargetServiceName, (uint16_t)(chipid & 0xFFFF));
+    Serial.print("Device Name: "); Serial.println(szName);
 
     // Init BLE  - give it our device name.
     BLEDevice::init(szName);
