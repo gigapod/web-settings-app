@@ -739,7 +739,6 @@ function startConnecting(){
     progressBar.start();
     isConnecting=true;
 
-    messageBox.showError("ERROR ERROR");
 }
 function endConnecting(success){ 
 
