@@ -829,7 +829,6 @@ function connectToGATT(device, nTries){
 
         }).catch(error => {
             console.log("Error: connectToGATT->getPrimaryService(), reconnecting:", nTries, error);
-            console.log(gattServer);
             window.clearTimeout(watchdog);
             window.clearTimeout(stillWorking);            
             disconnectBLEService();
