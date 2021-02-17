@@ -827,6 +827,7 @@ function connectToGATT(device, nTries){
         }).catch(error => {
             console.log("Error: connectToGATT->getPrimaryService(), reconnecting:", nTries, error);
             console.log(gattServer);
+            window.clearTimeout(watchdog);
             disconnectBLEService();
             messageBox.showWarning("Having trouble accessing bluetooth service. Retrying ...");
             setTimeout(()=>connectToGATT(device, nTries), 200);
