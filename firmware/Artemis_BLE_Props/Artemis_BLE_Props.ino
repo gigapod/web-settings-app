@@ -17,7 +17,7 @@
 // https://www.uuidgenerator.net/
 #define kTargetServiceUUID  "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define kTargetServiceName  "Artemis"
-
+#define kIDNameLength 6
 //--------------------------------------------------------------------------------------
 // Our Characteristic UUIDs - and yes, just made these up
 //--------------------------------------------------------------------------------------
@@ -350,19 +350,6 @@ void blePeripheralDisconnectHandler(BLEDevice central) {
   deviceConnected = false;  
 }
 
-uint32_t getUID(void){
-
-// on an apollo3 system - (#define from our mbed build system)
-#ifdef TARGET_FAMILY_Apollo3
-
-    // if this is Artemis (ambiq apollo3 blue), a unique ID is in the CHIPID0 reg. ->0x40020004
-    uint32_t *pID = (uint32_t*)0x40020004;
-    return *pID;
-#else 
-
-    return 0;
-#endif
-}
 char szName[24];
 //---------------------------------------------------------------------------------
 // Setup our system
@@ -374,6 +361,9 @@ void setup() {
     Serial.begin(115200);
     while (!Serial);
 
+    Serial.println();
+    Serial.println("Starting BLE Setup...");
+    
     // led to display when connected
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, (bIsEnabled ? HIGH : LOW));
@@ -383,17 +373,27 @@ void setup() {
         Serial.println("starting BLE failed!");
         while (1);
     }
+
     // assign event handlers for connected, disconnected to peripheral
     BLE.setEventHandler(BLEConnected, blePeripheralConnectHandler);
     BLE.setEventHandler(BLEDisconnected, blePeripheralDisconnectHandler);
 
-    uint32_t uid = getUID(); // get a unique ID.
-    snprintf(szName, sizeof(szName), "%s - %04X", kTargetServiceName, (uint16_t)(uid & 0xFFFF));
+    // Build a unique name using the BLE address 
+    String strAddress = BLE.address();
+    Serial.print("BLE Address: ");Serial.println(strAddress);
+
+    // Make a unique name using the address - pull out ":"s, shorten length to 6 and upcase it
+    for(int i;   (i = strAddress.indexOf(":")) > -1; strAddress.remove(i,1));
+
+    // shorten name and upcase it
+    strAddress = strAddress.substring(strAddress.length()-kIDNameLength);
+    strAddress.toUpperCase();
+    snprintf(szName, sizeof(szName), "%s - %s", kTargetServiceName, strAddress.c_str());
+
     Serial.print("Device Name: "); Serial.println(szName);
-    
+
     // name the device
     BLE.setLocalName(szName);
-
 
     // Setup service Characteristics
     setupBLECharacteristics(bleService);
@@ -407,6 +407,7 @@ void setup() {
 
     ticks = millis(); // for our notify example below
     Serial.println(F("OLA BLE ready for connections!"));
+
 }
 
 //-----------------------------------------------------------------------------------
