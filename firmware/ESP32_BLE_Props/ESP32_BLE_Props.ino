@@ -360,15 +360,21 @@ void setup() {
     Serial.begin(115200);
     Serial.println("Starting BLE work!");
 
-    // Build a unique name for this device - based on esp32 chip ID
-
+    // Build a unique name for this device - based on the BLE mac address
+    // esp32 requires the name during the init process and apparent way to change 
+    // the value (not via arduino API). But the mac address is based of the unique chip ID.
+    //
+    // Use the first three bytes of the chipd id to create a unique address
+    //
     uint64_t chipid = ESP.getEfuseMac(); // The chip ID is essentially its MAC address(length: 6 bytes).
-
-    snprintf(szName, sizeof(szName), "%s %04X", kTargetServiceName, (uint16_t)(chipid & 0xFFFF));
+    snprintf(szName, sizeof(szName), "%s - %06X", kTargetServiceName, chipid & 0xFFFFFF);
     Serial.print("Device Name: "); Serial.println(szName);
 
     // Init BLE  - give it our device name.
     BLEDevice::init(szName);
+
+    Serial.print("Device Address: "); 
+    Serial.println(BLEDevice::getAddress().toString().c_str());
 
     // Create our BLE Server - And add callback object (defined above)
     // The callback is used to keep track if a device is connected or not.
