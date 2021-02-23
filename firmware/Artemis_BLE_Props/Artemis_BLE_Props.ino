@@ -349,8 +349,29 @@ void blePeripheralDisconnectHandler(BLEDevice central) {
   Serial.println(central.address());
   deviceConnected = false;  
 }
-
+//---------------------------------------------------------------------------------
+// Build a device name that uses the BLE mac address
+//---------------------------------------------------------------------------------
 char szName[24];
+void setUniqueBLEName(){
+
+    // Build a unique name using the BLE address 
+    String strAddress = BLE.address();
+    Serial.print("BLE Address: ");Serial.println(strAddress);
+
+    // Make a unique name using the address - pull out ":"s, shorten length to kIDNameLength and upcase it
+    for(int i;   (i = strAddress.indexOf(":")) > -1; strAddress.remove(i,1));
+
+    // shorten name and upcase it
+    strAddress = strAddress.substring(strAddress.length()-kIDNameLength);
+    strAddress.toUpperCase();
+    snprintf(szName, sizeof(szName), "%s - %s", kTargetServiceName, strAddress.c_str());
+
+    Serial.print("Device Name: "); Serial.println(szName);
+
+    // name the device
+    BLE.setLocalName(szName);
+}
 //---------------------------------------------------------------------------------
 // Setup our system
 //---------------------------------------------------------------------------------
@@ -379,6 +400,8 @@ void setup() {
     BLE.setEventHandler(BLEDisconnected, blePeripheralDisconnectHandler);
 
     // Build a unique name using the BLE address 
+    setUniqueBLEName();
+    /*
     String strAddress = BLE.address();
     Serial.print("BLE Address: ");Serial.println(strAddress);
 
@@ -394,7 +417,7 @@ void setup() {
 
     // name the device
     BLE.setLocalName(szName);
-
+*/
     // Setup service Characteristics
     setupBLECharacteristics(bleService);
 
