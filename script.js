@@ -758,6 +758,7 @@ function endConnecting(success){
     }
     console.log("Properties Load Time:", Date.now()-debugLoadTime);
 }
+//------------------------------------------------------
 // For connectToGatt() - cascading timer obj
 const gattWatchdog = {
     timer_id: 0,
@@ -774,6 +775,7 @@ const gattWatchdog = {
                 // system is hung, reload page
                 window.setTimeout(()=>window.location.reload(false), 4000);
             },timeout/2);
+            
         }, timeout/2);
     },
     cancel: () => clearTimeout(this.timer_id)
@@ -815,7 +817,7 @@ function connectToGATT(device, nTries){
             gattWatchdog.cancel();
 
             progressBar.add_value(20);
-            
+
             // Now get all the characteristics for this service
             primaryService.getCharacteristics().then(theCharacteristics => {   
                 // Add the characteristics to the property sheet
