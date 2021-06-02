@@ -7,7 +7,7 @@
 body {
   width: 100%;
   height: 100vh;
-  background-image: linear-gradient(to top, #209cff 100%, #68e0cf 200%);
+  background-image: linear-gradient(to top, #1e1e1e 100%, #68e0cf 200%);
   display: flex;
   justify-content: center;
   align-items: start;
@@ -22,7 +22,7 @@ button {
   margin: 40px 0;
   width: 450px;
   padding: 10px 25px;
-  background: #0a0e31;
+  background: #202020;
   border-radius: 10px;
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.45), 0 4px 8px rgba(0, 0, 0, 0.35), 0 8px 12px rgba(0, 0, 0, 0.15);
   font-family: "Arial";
@@ -197,7 +197,7 @@ button {
   background: #4f4f6a;
 }
 .settings .setting input:disabled + label:after {
-  background: #909090;
+  background: #2b2b2b;
 }
 
 
@@ -217,11 +217,12 @@ button {
 .settings .text-prop input {
   position: absolute;
   right: 12px;
-  background: #a0a0a0;
+  background: #2b2b2b;
   font-weight: bold;
   font-size: 1.1rem;
   width:45%;
   text-align: left;
+  color: #fff;
 }
 
 .settings .text-prop input + label {
@@ -245,16 +246,18 @@ button {
 .settings .number-prop input {
   position: absolute;
   right: 12px;
-  background: #a0a0a0;
+  background: #2b2b2b;
   font-weight: bold;
   font-size: 1.1rem;
   width:45%;
   text-align: right;
+  color: #fff;  
 }
 
 .settings .number-prop input + label {
   user-select: none;
 }
+
 
 .settings .date-prop {
   position: relative;
@@ -272,17 +275,21 @@ button {
 .settings .date-prop input {
   position: absolute;
   right: 12px;
-  background: #a0a0a0;
+  background: #2b2b2b;
   font-weight: bold;
   font-size: 1.2rem;
   width:45%;
   text-align: left;
+  color: #fff;  
 }
 
 .settings .date-prop input + label {
   user-select: none;
 }
 
+.settings .date-prop input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
 
 .settings .time-prop {
   position: relative;
@@ -300,17 +307,21 @@ button {
 .settings .time-prop input {
   position: absolute;
   right: 12px;
-  background: #a0a0a0;
+  background: #2b2b2b;
   font-weight: bold;
   font-size: 1.2rem;
   width:45%;
   text-align: left;
+  color: #fff;
 }
 
 .settings .time-prop input + label {
   user-select: none;
 }
 
+.settings .time-prop input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
 .settings .select-prop {
   position: relative;
   width: 100%;
@@ -327,11 +338,12 @@ button {
 .settings .select-prop select {
   position: absolute;
   right: 12px;
-  background: #a0a0a0;
+  background: #2b2b2b;
   font-weight: bold;
   font-size: 1.2rem;
   width:45%;
   text-align: left;
+  color: #fff;  
 }
 
 .settings .select-prop input + label {
@@ -350,7 +362,7 @@ input[type=number]:invalid{
   border-radius: 8px;
   color: #fff;
   border: none;
-  background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background:  #4193F7;
   letter-spacing: 1px;
   font-weight: bold;
   text-transform: uppercase;
@@ -385,13 +397,13 @@ a:hover {
     position:absolute;
     right:0;
     top:0;
-    mix-blend-mode:darken;
-    color:#eeeeee;
-    fill:#353535;
+    mix-blend-mode:lighten;
+    color:#000000;
+    fill:#ff0000;
     clip-path: polygon(0 0, 100% 0, 100% 100%);
 }
 .sparkfun-corner:hover svg { mix-blend-mode: normal;}
-.sparkfun-corner:hover .sparkfun-flame {color: #ff0000;}
+.sparkfun-corner:hover .sparkfun-flame {color: #ffffff;}
 
 #myProgress {
   width: 100%;
