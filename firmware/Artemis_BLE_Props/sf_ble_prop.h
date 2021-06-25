@@ -8,12 +8,38 @@
  *  property information is used by a client application to render a property sheet 
  *  that represents
  *
- *  USE
+ *  This file contains routines that abstract/hide the encoding of property meta-data 
+ *  in a single BLE descriptor.
+ *
+ *  Both Arduino BLE (mbedOS based) and ESP32 BLE are supported
  *
  * 
  *  HISTORY
  *    Feb, 2021     - Initial developement - KDB
- *  
+ * 
+ *
+ *==================================================================================
+ * Copyright (c) 2021 SparkFun Electronics
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *==================================================================================
+ * 
  */
 
 
@@ -62,7 +88,7 @@ uint8_t kSFEPropTypeSelect    = 0x8;
 #define kBlkIncrement   0x04
 
 //-------------------------------------------------------------------------
-static uint8_t sort_pos=0;  // if there are over 256 props, this system has bigger issues
+static uint8_t sort_pos=0;  // only 8 bits - if there are over 256 props, this system has bigger issues
 
 //-------------------------------------------------------------------------
 // Platform dependant defs ...
@@ -144,7 +170,7 @@ public:
     // addInt()  - With increment value
     //
     // Defines the characteristic as a "integer" property. The increment value is used
-    // by the property sheet for control step values    
+    // by the property sheet for UX control step values    
     //
     static void addInt(sfe_bleprop_charc_t bleChar,  sfe_ble_const char *strName, 
                         uint32_t increment){
