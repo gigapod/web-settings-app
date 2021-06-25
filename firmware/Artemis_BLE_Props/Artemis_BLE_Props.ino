@@ -1,11 +1,38 @@
-
 /*
  *
  * SparkFun ArduinoBLE (SparkFun Artemis) BLE Settings App Example
  * =======================================
  *
- * [TODO - Descripton, attribution and license]
+ *  ArduinoBLE/Artemis example of the  SparkFun BLE Property system.
  *
+ *  The example shows how to setup BLE "properties" in the Artemis Arduino 
+ *  environment for use with the SparkFun BLE Web Property Sheet.
+ * 
+ *  HISTORY
+ *    Feb, 2021     - Initial developement - KDB
+ * 
+ *==================================================================================
+ * Copyright (c) 2021 SparkFun Electronics
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *==================================================================================
+ * 
  */
 #include "ArduinoBLE.h"
 
@@ -38,7 +65,7 @@
 // ArduinoBLE Object declaration 
 //
 // Declare the main objects that define this BLE service here. Will connect everything 
-// together late in the app logic. This enables these objects to be stack based
+// together later in the app logic. This enables these objects to be stack based
 
 // Our BLE Service
 BLEService bleService(kTargetServiceUUID);
@@ -123,8 +150,8 @@ unsigned long ticks;
 // the various descriptor requests from the client app. Any additional work being 
 // performed in loop() can impact the BLE systems performance.
 //
-// To provide a "work" pause on connect, a "on connection" event is determined, 
-// and a work "timeout" is implemented for N seconds. 
+// To provide a "work" pause on connect, this example implements a "on connection" event  
+// is determined,and a work "timeout" is implemented for N seconds. 
 //  
 // Define work timeout in MS. 
 const unsigned int bleOnConnectDelay = 3400;  // ms  on BLE connection "work" timeout
@@ -320,7 +347,7 @@ void setupBLECharacteristics(BLEService& theService){
     bleCharOffset.setValue(offsetValue);
     bleCharOffset.setEventHandler(BLEWritten, offsetUpdateCB);  
 
-    // The Mode (select type) characteristic
+    // The Mode (select type) characteristic. Note the available values seperated by a "|"
     BLEProperties.addSelect(bleCharMode, "Active Mode", "Constant|Stepper|Chirp"); // setup property descriptor  
 
     theService.addCharacteristic(bleCharMode);  
@@ -468,7 +495,7 @@ void loop()
         ////////////////////////////
         // >> DO LOOP WORK HERE <<
         ///////////////////////////
-        delay(200);    // *WORK*
+        delay(200);    // Example *WORK*
     }
 
     // Pump the BLE service - everything is handled in callbacks.
