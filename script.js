@@ -1,13 +1,44 @@
 
-// App to connect to an embedded device (like SparkFun OpenLog) and manage settings via BLE
-
+//--------------------------------------------------------------------------------------
+// Written by SparkFun Electronics, Spring 2021
+//
+// An Client Property Sheet App to connect to an embedded device (like SparkFun OpenLog),
+// determine available propertys using BLE and dynamically render the appropriate user 
+// interface for each property.
+//
+// The app leverages the WEB BLE API, available on Chrome-based browsers.
+//
+// For this app to operate correctly, the underlying device must encode and advertise properties
+// as shown by the examples included in the apps respository.
+//
+//==================================================================================
+// Copyright (c) 2021 SparkFun Electronics
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//==================================================================================
 
 // SETUP - Define the Target BLE Service
 //--------------------------------------------------------------------------------------
 const kTargetServiceUUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
 const kTargetServiceName = "SparkFun Board";
 //--------------------------------------------------------------------------------------
-
+//
 console.clear();
 
 //--------------------------------------------------------------------------------------
@@ -20,7 +51,8 @@ console.clear();
 const kBLEDescSFEPropCoreUUID = 0xA101;
 
 var bIsConnected = false;
-// Simple Data marshling code
+
+// Text conversion helpers
 
 const textDecoder = new TextDecoder();
 function dataToText(data){ return textDecoder.decode(data);}
@@ -28,9 +60,9 @@ function dataToText(data){ return textDecoder.decode(data);}
 const textEncoder = new TextEncoder();
 function textToData(text){ return textEncoder.encode(text);}
 
-	
 const targetID = 'settings-container';
 
+// Property list - keeps track of the devices properties.
 const currentProperties=[];
 
 let deviceName=kTargetServiceName;
@@ -38,10 +70,10 @@ function setDeviceName(name){
     deviceName = name;
     document.getElementById("settings-title").innerHTML= name+ " Settings";
 }
-// DEBUG
-
+// DEBUG?
 let debugLoadTime=0;
 
+// Setup our progress bar object -- used when loading
 const progressBar = {
     increment: 1,
     set_value: function(value){
@@ -60,6 +92,7 @@ const progressBar = {
     }
 };
 
+// Simple error/warning/info message box object
 const messageBox = {
 
     msg_error : document.querySelector("#message-error"),
@@ -98,6 +131,13 @@ const kBlkTitle     = 0x01;
 const kBlkSelectOps = 0x03;
 const kBlkIncrement = 0x04;
 
+// Each property "type" is subclassed from a base class the defines the
+// property interface. 
+//
+// Each specialization class implements the UX of the property element and how
+// to manage the property value. Also it manages information decoding from
+// the BLE data received. 
+//
 // Base property class 
 class Property{
 
@@ -113,10 +153,11 @@ class Property{
 
     }
     
+    // Called to process data from the properties descriptor
     processBlk(blkType, value, iPos){
 
 
-        if(blkType != kBlkTitle){
+        if(blkType != kBlkTitle){  // does this property have a group title?
             return iPos;
         }
         let len = value.getUint8(iPos++);
@@ -129,7 +170,7 @@ class Property{
         // For now - enable notifications on all values ...
         this.enableNotifications();
             
-        // check for group title
+        // check for group title - process using a Promise...
         
         return new Promise( (resolve) => {
 
@@ -184,8 +225,10 @@ class Property{
     }
 }
 // -------------------------------------------
+// Boolean property 
 class boolProperty extends Property{
 
+    // create the ux/html / element
    	generateElement(){
 
    	    this.div = document.createElement("div");
@@ -213,7 +256,7 @@ class boolProperty extends Property{
 
     saveValue(){
 
-        // Get the value from the input field and save it to the characteristic
+        // Get the value from the input field and save it to the BLEcharacteristic
         let buff = new ArrayBuffer(1);
         let newValue = new Uint8Array(buff);
         newValue[0] = this.inputField.checked;
@@ -222,10 +265,15 @@ class boolProperty extends Property{
 }
 
 //-------------------------------------------------------------
+// Range Property
+//
+// Define some colors/UX
 const range_fill = "#0B1EDF";
 const range_background = "rgba(255, 255, 255, 0.214)";   
 
 class rangeProperty extends Property{
+
+    // Grab min and max values from the data block for this property
 
     processBlk(blkType, value, iPos){
 
@@ -238,6 +286,7 @@ class rangeProperty extends Property{
 
     }
     
+    // Used to update the UX when the value changes...
     _updateUX(value){
         //set text
         this.txtValue.setAttribute("data-length", ' ' + value);
@@ -281,7 +330,7 @@ class rangeProperty extends Property{
     }
 
     saveValue(){
-        // Get the value from the input field and save it to the characteristic
+        // Get the value from the input field and save it to the BLE characteristic
         let buff = new ArrayBuffer(4);
         let newValue = new Int32Array(buff);
         newValue[0] = this.input.value;
@@ -291,6 +340,7 @@ class rangeProperty extends Property{
 
 //-------------------------------------------------------------
 // textProperty Object
+
 class textProperty extends Property{
 
    	generateElement(){
@@ -317,13 +367,13 @@ class textProperty extends Property{
 
     saveValue(){
         // Get the value from the input field and save it to the characteristic
-        //console.log("Save Value Text: " + this.inputField.value);
         this.characteristic.writeValue(textToData(this.inputField.value));
     }
 }
 
 //-------------------------------------------------------------
 // intProperty Object
+
 class intProperty extends Property{
 
     constructor(bleChar, name, order){
@@ -381,6 +431,7 @@ class intProperty extends Property{
 }
 //-------------------------------------------------------------
 // dateProperty Object
+
 class dateProperty extends Property{
 
     
@@ -434,6 +485,7 @@ class dateProperty extends Property{
 
 //-------------------------------------------------------------
 // timeProperty Object
+
 class timeProperty extends Property{
 
     
@@ -481,6 +533,9 @@ class timeProperty extends Property{
 
     }
 }
+//-------------------------------------------------------------
+// floatProperty Object
+
 class floatProperty extends Property{
     
      processBlk(blkType, value, iPos){
@@ -536,6 +591,11 @@ class floatProperty extends Property{
         
     }
 }
+//-------------------------------------------------------------
+// selectProperty Object
+//
+// Select a value from a list of possible values
+
 class selectProperty extends Property{
 
     processBlk(blkType, value, iPos){
@@ -602,6 +662,7 @@ function showProperties(){
 */
 }
 
+// Used for property sorting --
 function compairPropOrder(a, b){
 
     if ( a.order < b.order ){
@@ -648,7 +709,7 @@ function addPropertyToSystem(bleCharacteristic){
                 console.log("No type descriptor found.")
                 resolve(-1);
             }
-            //console.log(descs);
+
             // Get the value of the type descriptor
             descType.readValue().then(value =>{
                 let iPos = 0;
@@ -668,7 +729,7 @@ function addPropertyToSystem(bleCharacteristic){
                 // build prop object - notice index into array of prop class defs 
                 let property = new propFactory[type-1](bleCharacteristic, name, order);   
 
-                // Does this property have onter data blocks in the descriptor value 
+                // Does this property have other data blocks in the descriptor value 
                 while(iPos < value.byteLength){
                     let blkType = value.getUint8(iPos++);
                     iPos = property.processBlk(blkType, value , iPos);
@@ -710,8 +771,6 @@ function bleConnected(gattServer){
         return;
     }
     theGattServer = gattServer;
-
-
     
 }
 // disconnect event handler.
@@ -728,6 +787,7 @@ function onDisconnected(){
     theGattServer=null;
 
 }
+
 function startConnecting(){ 
     document.body.style.cursor = "wait";
     // update button label
@@ -741,6 +801,7 @@ function startConnecting(){
     isConnecting=true;
 
 }
+
 function endConnecting(success){ 
 
     isConnecting=false;
@@ -750,6 +811,7 @@ function endConnecting(success){
     button.disabled=false;
     button.style.cursor = "auto";   
     progressBar.end();
+   
     if(success){
         // update button label
         document.getElementById("connect").innerHTML ="Disconnect From " + deviceName;
@@ -758,6 +820,7 @@ function endConnecting(success){
     }
     console.log("Properties Load Time:", Date.now()-debugLoadTime);
 }
+
 //------------------------------------------------------
 // For connectToGatt() - cascading timer obj
 const gattWatchdog = {
