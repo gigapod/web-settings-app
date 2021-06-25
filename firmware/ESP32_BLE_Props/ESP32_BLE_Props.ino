@@ -3,8 +3,36 @@
  * SparkFun ESP32 BLE Settings App Example
  * =======================================
  *
- * [TODO - Descripton, attribution and license]
+ *  ESP32 example of the  SparkFun BLE Property system.
  *
+ *  The example shows how to setup BLE "properties" in the ESP32 Arduino 
+ *  environment for use with the SparkFun BLE Web Property Sheet.
+ * 
+ *  HISTORY
+ *    Feb, 2021     - Initial developement - KDB
+ * 
+ *==================================================================================
+ * Copyright (c) 2021 SparkFun Electronics
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *==================================================================================
+ * 
  */
 #include <string>
 #include <BLEDevice.h>
@@ -14,6 +42,7 @@
 // Include BLE2902 - used to enable BLE notifications on a Characterisitcs.
 #include <BLE2902.h>
 
+// The examples callback object simplification header file
 #include "ESP32_BLE_Config.h"
 
 // Include SparkFun functions to define "properties" out of characteristics
@@ -96,6 +125,9 @@ class MyServerCallbacks: public BLEServerCallbacks {
       deviceConnected = false;
     }
 };
+
+// String utility for BLE string data marshaling
+//
 //4 bytes come in but they are little endian. Flip them around.
 //Convert a std string to a int
 int32_t stringToValue(std::string myString)
@@ -130,6 +162,7 @@ void onEnabledUpdate(bool newValue){
     deviceEnabled = newValue;
     digitalWrite(LED_BUILTIN, (deviceEnabled ? HIGH : LOW));    
 }
+
 BLECharacteristic * setupEnabledCharacteristic(BLEService *pService){
 
     BLECharacteristic *pCharBaud;
@@ -140,7 +173,8 @@ BLECharacteristic * setupEnabledCharacteristic(BLEService *pService){
                             BLECharacteristic::PROPERTY_WRITE |
                             BLECharacteristic::PROPERTY_NOTIFY );
 
-    // Set the value in the callbacks 
+    // Set the value in the callbacks - this is using our defined object to
+    // just relay the update to the onEnabledUpdate() c function.
     pCharBaud->setCallbacks(new BoolPropertyValueCB(&deviceEnabled, onEnabledUpdate));
 
     return pCharBaud;
@@ -157,6 +191,7 @@ void onBaudUpdate(int32_t newValue){
     Serial.print("Update Baud Value: "); 
     Serial.println(baudRate);
 }
+
 BLECharacteristic * setupBaudCharacteristic(BLEService *pService){
 
     BLECharacteristic *pCharBaud;
@@ -182,6 +217,7 @@ void onSSIDUpdate(std::string &  newValue){
     Serial.print("Update SSID Value: "); 
     Serial.println(newValue.c_str());
 }
+
 BLECharacteristic * setupSSIDCharacteristic(BLEService *pService){
 
     BLECharacteristic *pChar;
@@ -207,6 +243,7 @@ void onPasswordUpdate(std::string &  newValue){
     Serial.print("Update WiFi Password Value: "); 
     Serial.println(newValue.c_str());
 }
+
 BLECharacteristic * setupPasswordCharacteristic(BLEService *pService){
 
     BLECharacteristic *pChar;
@@ -231,6 +268,7 @@ void onSampleRateUpdate(int32_t newValue){
     Serial.print("Update Sample Value: "); 
     Serial.println(sampleRate);
 }
+
 BLECharacteristic * setupSampleRateCharacteristic(BLEService *pService){
 
 
@@ -258,6 +296,7 @@ void onDateUpdate(std::string &  newValue){
     Serial.print("Update Date Value: "); 
     Serial.println(newValue.c_str());
 }
+
 BLECharacteristic * setupDateCharacteristic(BLEService *pService){
 
     BLECharacteristic *pCharDate;
@@ -283,6 +322,7 @@ void onTimeUpdate(std::string &  newValue){
     Serial.print("Update Time Value: "); 
     Serial.println(newValue.c_str());
 }
+
 BLECharacteristic * setupTimeCharacteristic(BLEService *pService){
 
     BLECharacteristic *pCharTime;
@@ -309,6 +349,7 @@ void onOffsetUpdate(float newValue){
     Serial.print("Update Offset(float) Value: "); 
     Serial.println(newValue);
 }
+
 BLECharacteristic * setupOffsetCharacteristic(BLEService *pService){
 
     BLECharacteristic *pCharOff;
@@ -336,6 +377,7 @@ void onModeUpdate(std::string &  newValue){
     Serial.print("Update Mode Value: "); 
     Serial.println(newValue.c_str());
 }
+
 BLECharacteristic * setupModeCharacteristic(BLEService *pService){
 
     BLECharacteristic *pChar;
@@ -448,7 +490,8 @@ void setup() {
     BLEProperties.addFloat(pCharOffset, "Offset Bias", 0.001);    
 
 
-
+    // Setup "mode" - note this is a "select" property, with three possible values:
+    //   "Constant", "Stepper", "Chirp".  -- the values are seperated by a '|' in a single string
     pChar = setupModeCharacteristic(pService);
     // The Mode (select type) characteristic
     BLEProperties.addSelect(pChar, "Active Mode", "Constant|Stepper|Chirp"); 
